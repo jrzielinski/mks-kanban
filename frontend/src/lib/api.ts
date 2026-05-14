@@ -1,8 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import toast from 'react-hot-toast'
 import i18n from './i18n'
-import { installVscodeAdapter } from '@/embed/axiosAdapter'
-
 // Função para extrair tenantId do domínio - 100% compatível com TenantMiddleware backend
 function getTenantIdFromDomain(): string {
   const hostname = window.location.hostname
@@ -43,11 +41,6 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 })
-
-// VSCode embed mode: route every HTTP call via postMessage to the extension
-// host. Synchronous install so the adapter is in place before any interceptor
-// fires. No-op outside of a webview (regular web build keeps default adapter).
-installVscodeAdapter(api)
 
 // Request interceptor to add auth token and tenant isolation
 api.interceptors.request.use(

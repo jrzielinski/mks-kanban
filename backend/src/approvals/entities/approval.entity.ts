@@ -2,14 +2,11 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
-  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
   Index,
   OneToMany,
 } from 'typeorm';
-import { FlowExecutionEntity } from '../../flow-engine/entities/flow-execution.entity';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
 export type ApprovalPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -45,10 +42,6 @@ export class ApprovalEntity {
 
   @Column({ name: 'flowExecutionId', nullable: true })
   flowExecutionId: string;
-
-  @ManyToOne(() => FlowExecutionEntity, { nullable: true })
-  @JoinColumn({ name: 'flowExecutionId' })
-  flowExecution?: FlowExecutionEntity;
 
   @Column({ name: 'flowId', nullable: true })
   flowId: string;
