@@ -1,0 +1,25 @@
+{
+  "name": "mks-kanban-desktop",
+  "version": "0.1.0",
+  "description": "MKS Kanban — Electron desktop app",
+  "private": true,
+  "main": "dist/main.js",
+  "scripts": {
+    "build:main": "tsc -p tsconfig.json",
+    "build:renderer": "npm run build --prefix ../frontend",
+    "build": "npm run build:renderer && npm run build:main",
+    "pack": "npm run build && electron-builder --config electron-builder.json",
+    "pack:dir": "npm run build && electron-builder --dir --config electron-builder.json",
+    "dev": "electron --no-sandbox .",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "electron": "^28.3.3",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.4.0"
+  }
+}

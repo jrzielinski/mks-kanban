@@ -1,0 +1,35 @@
+# Node
+node_modules/
+npm-debug.log*
+
+# Build outputs
+dist/
+dist-kanban-app/
+bin/
+
+# Desktop build cache
+desktop/dist/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Test
+coverage/
+
+# Electron builder cache
+.electron-builder.env

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "dev.makestudio.kanban",
+  "productName": "MakeStudio Kanban",
+  "electronVersion": "28.3.3",
+  "publish": {
+    "provider": "github",
+    "owner": "jrzielinski",
+    "repo": "mks-kanban"
+  },
+  "directories": {
+    "output": "../bin/electron-kanban"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "node_modules/**/*",
+    "assets/**/*"
+  ],
+  "extraResources": [
+    {
+      "from": "../frontend/dist",
+      "to": "kanban-app"
+    }
+  ],
+  "icon": "assets/kanban/icon.png",
+  "mac": {
+    "category": "public.app-category.productivity",
+    "target": [
+      { "target": "dmg", "arch": ["arm64"] }
+    ],
+    "hardenedRuntime": false,
+    "gatekeeperAssess": false,
+    "identity": null
+  },
+  "win": {
+    "target": ["nsis"]
+  },
+  "linux": {
+    "target": ["AppImage"],
+    "category": "Productivity"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}

@@ -1,0 +1,836 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+
+  body.dark {
+    @apply bg-gray-900 text-gray-100;
+  }
+
+  /* Handle cursors on nodes palette */
+  .nodes-palette-container [draggable="true"] {
+    cursor: move !important;
+  }
+
+  .nodes-palette-container [draggable="true"]:active {
+    cursor: grabbing !important;
+  }
+  
+  /* Melhorar scroll em toda aplicação */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #6b7280 #1f2937;
+  }
+  
+  /* Webkit browsers (Chrome, Safari) */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  *::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+  }
+  
+  *::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500;
+  }
+
+  /* Scroll discreto pros containers que vivem sobre tons escuros
+     (modal do card kanban, sidebars do card, etc.) — barra padrão
+     desenhada pra fundo claro fica explodindo de contraste. Use
+     `kanban-scroll` no overflow-y-auto. */
+  .kanban-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(120, 132, 143, 0.45) transparent;
+  }
+  .kanban-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .kanban-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .kanban-scroll::-webkit-scrollbar-thumb {
+    background: rgba(120, 132, 143, 0.35);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  .kanban-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 132, 143, 0.65);
+    background-clip: padding-box;
+  }
+  .dark .kanban-scroll {
+    scrollbar-color: rgba(140, 155, 171, 0.25) transparent;
+  }
+  .dark .kanban-scroll::-webkit-scrollbar-thumb {
+    background: rgba(140, 155, 171, 0.20);
+    background-clip: padding-box;
+  }
+  .dark .kanban-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(140, 155, 171, 0.45);
+    background-clip: padding-box;
+  }
+
+
+  /* Remove fundo branco padrão dos nós React Flow */
+  .react-flow__node {
+    background: transparent !important;
+    border: none !important;
+  }
+
+  /* Remove bordas de seleção do React Flow */
+  .react-flow__node.selected {
+    outline: none !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Estilo dos handles (círculos de conexão) - Tamanhos maiores e visíveis */
+  .react-flow__handle {
+    width: 12px !important;
+    height: 12px !important;
+    border: 2px solid #64748b !important;
+    background: white !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .dark .react-flow__handle {
+    background: #1e293b !important;
+    border: 2px solid #64748b !important;
+  }
+
+  .react-flow__handle:hover {
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #3b82f6 !important;
+    background: #3b82f6 !important;
+  }
+
+  /* Box Selection styling (like n8n) */
+  .react-flow__selection {
+    background: rgba(59, 130, 246, 0.15) !important; /* Blue with transparency */
+    border: 2px solid rgb(59, 130, 246) !important; /* Blue border */
+  }
+
+  /* Dark mode box selection */
+  .dark .react-flow__selection {
+    background: rgba(96, 165, 250, 0.2) !important; /* Lighter blue in dark mode */
+    border: 2px solid rgb(96, 165, 250) !important;
+  }
+
+  .react-flow__node.selected:before,
+  .react-flow__node.selected:after {
+    content: none !important;
+  }
+
+  /* Remove qualquer borda extra */
+  .react-flow__node * {
+    outline: none !important;
+  }
+
+  /* Remove borda específica do React Flow para TODOS os tipos de node */
+  .react-flow__node.react-flow__node-input.selected,
+  .react-flow__node.react-flow__node-group.selected,
+  .react-flow__node.react-flow__node-number.selected,
+  .react-flow__node.react-flow__node-email.selected,
+  .react-flow__node.react-flow__node-email_input.selected,
+  .react-flow__node.react-flow__node-phone.selected,
+  .react-flow__node[class*="selected"] {
+    box-shadow: none !important;
+    outline: none !important;
+    border: none !important;
+  }
+
+  /* Aumentar tamanho dos handles (conectores dos nós) */
+  .react-flow__handle {
+    width: 10px !important;
+    height: 10px !important;
+    border: 2px solid white !important;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* Handles em dark mode */
+  .dark .react-flow__handle {
+    border: 2px solid #1f2937 !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+  }
+
+  /* Handles ao passar o mouse */
+  .react-flow__handle:hover {
+    width: 12px !important;
+    height: 12px !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
+  }
+
+
+
+  /* Headings com cores corretas para ambos os temas */
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-gray-900 dark:text-white;
+  }
+
+  /* Textos em geral no tema escuro */
+  .dark p:not([class*="text-"]), 
+  .dark span:not([class*="text-"]),
+  .dark div:not([class*="text-"]) {
+    @apply text-gray-100;
+  }
+
+  /* Forçar scrollbar sempre visível no NodesPalette */
+  .nodes-palette-scrollable {
+    overflow-y: scroll !important;
+    min-height: 400px !important;
+    height: calc(100vh - 300px) !important;
+    max-height: calc(100vh - 200px) !important;
+  }
+
+  /* Garantir scrollbar sempre visível mesmo sem conteúdo suficiente */
+  .nodes-palette-scrollable::-webkit-scrollbar {
+    width: 8px !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  .nodes-palette-scrollable::-webkit-scrollbar-track {
+    @apply bg-gray-100 dark:bg-gray-800 rounded-lg;
+    display: block !important;
+  }
+
+  .nodes-palette-scrollable::-webkit-scrollbar-thumb {
+    @apply bg-gray-400 dark:bg-gray-600 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500;
+    min-height: 30px;
+  }
+
+  /* Firefox */
+  .nodes-palette-scrollable {
+    scrollbar-width: thin !important;
+    scrollbar-color: #9ca3af #f3f4f6 !important;
+  }
+
+  .dark .nodes-palette-scrollable {
+    scrollbar-color: #4b5563 #1f2937 !important;
+  }
+
+  /* Garantir que todos os elementos tenham cores corretas de borda */
+  * {
+    @apply border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Garantir que inputs e selects tenham fundo correto */
+  input, select, textarea {
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600;
+  }
+  
+  /* Modais e overlays */
+  .modal-overlay {
+    @apply bg-black bg-opacity-50;
+  }
+  
+  /* Tooltips */
+  .tooltip {
+    @apply bg-gray-900 dark:bg-gray-700 text-white dark:text-gray-100;
+  }
+
+  /* CRITICAL FIX: Prevent stuck drag cursor after paste operation */
+  body.force-default-cursor,
+  body.force-default-cursor * {
+    cursor: default !important;
+  }
+
+  /* Reset drag cursor on react-flow canvas after paste */
+  .react-flow__pane {
+    cursor: default !important;
+  }
+
+  .react-flow__pane.dragging {
+    cursor: grabbing !important;
+  }
+
+  /* Ensure nodes palette only shows drag cursor on hover */
+  .nodes-palette-container [draggable="true"]:not(:active):not(:hover) {
+    cursor: default !important;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm dark:bg-primary-600 dark:hover:bg-primary-700;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500 dark:bg-gray-700 dark:text-gray-100 dark:hover:bg-gray-600;
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700;
+  }
+
+  .btn-ghost {
+    @apply btn text-gray-700 hover:bg-gray-100 focus:ring-gray-500 dark:text-gray-200 dark:hover:bg-gray-800;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger-600 text-white hover:bg-danger-700 focus:ring-danger-500 dark:bg-danger-600 dark:hover:bg-danger-700;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-gray-900 dark:text-gray-100 px-3 py-2 text-sm placeholder-gray-400 dark:placeholder-gray-500 shadow-sm transition-colors focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+  }
+
+  .card {
+    @apply rounded-xl bg-white dark:bg-dark-card p-6 shadow-soft;
+  }
+
+  .card-header {
+    @apply mb-4 border-b border-gray-200 pb-4;
+  }
+
+  .sidebar-item {
+    @apply flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors;
+  }
+
+  .sidebar-item-active {
+    @apply bg-primary-50 text-primary-700 border-r-2 border-primary-600;
+  }
+
+  .sidebar-item-inactive {
+    @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
+  }
+}
+
+/* ── Temas de SO ─────────────────────────────────────── */
+
+/* macOS — Aqua style, accent azul Apple */
+html.theme-macos {
+  --accent: #007AFF;
+  --accent-hover: #0066CC;
+  --accent-light: #007AFF20;
+  --sidebar-bg: #f5f5f7;
+  --card-radius: 12px;
+  --window-bg: #ffffff;
+  --titlebar-bg: linear-gradient(180deg, #e8e8e8, #d0d0d0);
+}
+html.dark.theme-macos {
+  --accent: #0A84FF;
+  --accent-hover: #409CFF;
+  --sidebar-bg: #1e1e1e;
+  --window-bg: #1e1e1e;
+  --titlebar-bg: linear-gradient(180deg, #3a3a3c, #2c2c2e);
+}
+/* macOS Dark — fundos grafite estilo macOS Sonoma/Ventura */
+html.dark.theme-macos body {
+  background-color: #1c1c1e !important;
+}
+html.dark.theme-macos .dark\:bg-dark-bg,
+html.dark.theme-macos .dark\:bg-gray-900 {
+  background-color: #1c1c1e !important;
+}
+html.dark.theme-macos .dark\:bg-dark-card,
+html.dark.theme-macos .dark\:bg-gray-800 {
+  background-color: #2c2c2e !important;
+}
+html.dark.theme-macos .dark\:bg-gray-800\/50 {
+  background-color: rgba(44, 44, 46, 0.5) !important;
+}
+html.dark.theme-macos .dark\:border-dark-border,
+html.dark.theme-macos .dark\:border-gray-700 {
+  border-color: #3a3a3c !important;
+}
+html.dark.theme-macos .dark\:border-gray-600 {
+  border-color: #48484a !important;
+}
+
+html.theme-macos .btn-primary,
+html.theme-macos .bg-violet-600,
+html.theme-macos .bg-violet-500 {
+  background-color: var(--accent) !important;
+}
+html.theme-macos .bg-violet-600:hover,
+html.theme-macos .bg-violet-500:hover {
+  background-color: var(--accent-hover) !important;
+}
+html.theme-macos .text-violet-600,
+html.theme-macos .text-violet-700,
+html.theme-macos .text-violet-500 {
+  color: var(--accent) !important;
+}
+html.theme-macos .border-violet-200,
+html.theme-macos .border-violet-300 {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
+}
+html.theme-macos .bg-violet-50 {
+  background-color: color-mix(in srgb, var(--accent) 8%, white) !important;
+}
+html.dark.theme-macos .bg-violet-50,
+html.dark.theme-macos [class*="bg-violet-500\\/"] {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
+
+/* Windows — Fluent Design, accent azul Microsoft */
+html.theme-windows {
+  --accent: #0078D4;
+  --accent-hover: #106EBE;
+  --accent-light: #0078D420;
+  --sidebar-bg: #f3f3f3;
+  --card-radius: 4px;
+  --window-bg: #ffffff;
+}
+html.dark.theme-windows {
+  --accent: #60CDFF;
+  --accent-hover: #98DEFF;
+  --sidebar-bg: #202020;
+  --window-bg: #1f1f1f;
+}
+/* Windows Dark — Fluent/Mica estilo Windows 11 */
+html.dark.theme-windows body {
+  background-color: #202020 !important;
+}
+html.dark.theme-windows .dark\:bg-dark-bg,
+html.dark.theme-windows .dark\:bg-gray-900 {
+  background-color: #202020 !important;
+}
+html.dark.theme-windows .dark\:bg-dark-card,
+html.dark.theme-windows .dark\:bg-gray-800 {
+  background-color: #2d2d2d !important;
+}
+html.dark.theme-windows .dark\:bg-gray-800\/50 {
+  background-color: rgba(45, 45, 45, 0.5) !important;
+}
+html.dark.theme-windows .dark\:border-dark-border,
+html.dark.theme-windows .dark\:border-gray-700 {
+  border-color: #383838 !important;
+}
+html.dark.theme-windows .dark\:border-gray-600 {
+  border-color: #454545 !important;
+}
+
+html.theme-windows * {
+  border-radius: revert;
+}
+html.theme-windows .rounded-xl { border-radius: 4px !important; }
+html.theme-windows .rounded-lg { border-radius: 4px !important; }
+html.theme-windows .rounded-2xl { border-radius: 6px !important; }
+
+html.theme-windows .btn-primary,
+html.theme-windows .bg-violet-600,
+html.theme-windows .bg-violet-500 {
+  background-color: var(--accent) !important;
+}
+html.theme-windows .bg-violet-600:hover,
+html.theme-windows .bg-violet-500:hover {
+  background-color: var(--accent-hover) !important;
+}
+html.theme-windows .text-violet-600,
+html.theme-windows .text-violet-700,
+html.theme-windows .text-violet-500 {
+  color: var(--accent) !important;
+}
+html.theme-windows .border-violet-200,
+html.theme-windows .border-violet-300 {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent) !important;
+}
+html.theme-windows .bg-violet-50 {
+  background-color: color-mix(in srgb, var(--accent) 8%, white) !important;
+}
+html.dark.theme-windows .bg-violet-50,
+html.dark.theme-windows [class*="bg-violet-500\\/"] {
+  background-color: color-mix(in srgb, var(--accent) 10%, transparent) !important;
+}
+
+/* Ubuntu — Yaru theme, accent laranja Ubuntu */
+/* ── Ubuntu — Yaru ───────────────────────────────────── */
+html.theme-ubuntu {
+  --accent: #E95420;
+  --accent-hover: #C34113;
+  --accent-light: #E9542020;
+  --card-radius: 8px;
+}
+
+/* Ubuntu Light */
+html.theme-ubuntu:not(.dark) body { background-color: #FDF6F0 !important; }
+html.theme-ubuntu:not(.dark) .bg-white { background-color: #FFFFFF !important; }
+html.theme-ubuntu:not(.dark) .bg-gray-50,
+html.theme-ubuntu:not(.dark) .bg-gray-100 { background-color: #FEF0E8 !important; }
+html.theme-ubuntu:not(.dark) .border-gray-200 { border-color: #F5C9B3 !important; }
+
+/* Ubuntu Dark */
+html.dark.theme-ubuntu { --sidebar-bg: #2C001E; --window-bg: #2D2D2D; }
+html.dark.theme-ubuntu body { background-color: #1a1a2e !important; }
+html.dark.theme-ubuntu .dark\:bg-dark-bg,
+html.dark.theme-ubuntu .dark\:bg-gray-900 { background-color: #1a1a2e !important; }
+html.dark.theme-ubuntu .dark\:bg-dark-card,
+html.dark.theme-ubuntu .dark\:bg-gray-800 { background-color: #2D2D2D !important; }
+html.dark.theme-ubuntu .dark\:border-dark-border,
+html.dark.theme-ubuntu .dark\:border-gray-700 { border-color: #3d3d3d !important; }
+html.dark.theme-ubuntu .dark\:border-gray-600 { border-color: #4a4a4a !important; }
+html.dark.theme-ubuntu .dark\:hover\:bg-gray-700:hover { background-color: #3d3d3d !important; }
+
+/* Ubuntu — accent (ambos os modos) */
+html.theme-ubuntu .btn-primary,
+html.theme-ubuntu [class*="bg-violet-600"],
+html.theme-ubuntu [class*="bg-violet-500"] { background-color: var(--accent) !important; }
+html.theme-ubuntu [class*="bg-violet-600"]:hover,
+html.theme-ubuntu [class*="bg-violet-500"]:hover { background-color: var(--accent-hover) !important; }
+html.theme-ubuntu [class*="text-violet-600"],
+html.theme-ubuntu [class*="text-violet-500"],
+html.theme-ubuntu [class*="text-violet-400"] { color: var(--accent) !important; }
+html.theme-ubuntu [class*="border-violet-"] { border-color: var(--accent) !important; }
+
+/* ── Fedora — Adwaita ────────────────────────────────── */
+html.theme-fedora {
+  --accent: #3C6EB4;
+  --accent-hover: #2B5C9E;
+  --accent-light: #3C6EB420;
+  --card-radius: 10px;
+}
+
+/* Fedora Light */
+html.theme-fedora:not(.dark) body { background-color: #F6F5F4 !important; }
+html.theme-fedora:not(.dark) .bg-white { background-color: #FFFFFF !important; }
+html.theme-fedora:not(.dark) .bg-gray-50,
+html.theme-fedora:not(.dark) .bg-gray-100 { background-color: #EEF2F8 !important; }
+html.theme-fedora:not(.dark) .border-gray-200 { border-color: #BCCFEA !important; }
+
+/* Fedora Dark */
+html.dark.theme-fedora { --sidebar-bg: #1a1a2e; --window-bg: #242424; }
+html.dark.theme-fedora body { background-color: #1a1a2e !important; }
+html.dark.theme-fedora .dark\:bg-dark-bg,
+html.dark.theme-fedora .dark\:bg-gray-900 { background-color: #1a1a2e !important; }
+html.dark.theme-fedora .dark\:bg-dark-card,
+html.dark.theme-fedora .dark\:bg-gray-800 { background-color: #242424 !important; }
+html.dark.theme-fedora .dark\:border-dark-border,
+html.dark.theme-fedora .dark\:border-gray-700 { border-color: #3a3a4a !important; }
+html.dark.theme-fedora .dark\:border-gray-600 { border-color: #484858 !important; }
+html.dark.theme-fedora .dark\:hover\:bg-gray-700:hover { background-color: #3a3a4a !important; }
+
+/* Fedora — accent (ambos os modos) */
+html.theme-fedora .btn-primary,
+html.theme-fedora [class*="bg-violet-600"],
+html.theme-fedora [class*="bg-violet-500"] { background-color: var(--accent) !important; }
+html.theme-fedora [class*="bg-violet-600"]:hover,
+html.theme-fedora [class*="bg-violet-500"]:hover { background-color: var(--accent-hover) !important; }
+html.theme-fedora [class*="text-violet-600"],
+html.theme-fedora [class*="text-violet-500"],
+html.theme-fedora [class*="text-violet-400"] { color: var(--accent) !important; }
+html.theme-fedora [class*="border-violet-"] { border-color: var(--accent) !important; }
+
+/* ── SUSE — Chameleon ────────────────────────────────── */
+html.theme-suse {
+  --accent: #73BA25;
+  --accent-hover: #5EA21D;
+  --accent-light: #73BA2520;
+  --card-radius: 8px;
+}
+
+/* SUSE Light */
+html.theme-suse:not(.dark) body { background-color: #F4FAF0 !important; }
+html.theme-suse:not(.dark) .bg-white { background-color: #FFFFFF !important; }
+html.theme-suse:not(.dark) .bg-gray-50,
+html.theme-suse:not(.dark) .bg-gray-100 { background-color: #E8F5DC !important; }
+html.theme-suse:not(.dark) .border-gray-200 { border-color: #B8DFA0 !important; }
+
+/* SUSE Dark */
+html.dark.theme-suse { --sidebar-bg: #0C322C; --window-bg: #1e2e2a; }
+html.dark.theme-suse body { background-color: #0C322C !important; }
+html.dark.theme-suse .dark\:bg-dark-bg,
+html.dark.theme-suse .dark\:bg-gray-900 { background-color: #0C322C !important; }
+html.dark.theme-suse .dark\:bg-dark-card,
+html.dark.theme-suse .dark\:bg-gray-800 { background-color: #1e2e2a !important; }
+html.dark.theme-suse .dark\:border-dark-border,
+html.dark.theme-suse .dark\:border-gray-700 { border-color: #2a4a3f !important; }
+html.dark.theme-suse .dark\:border-gray-600 { border-color: #355a4f !important; }
+html.dark.theme-suse .dark\:hover\:bg-gray-700:hover { background-color: #2a4a3f !important; }
+
+/* SUSE — accent (ambos os modos) */
+html.theme-suse .btn-primary,
+html.theme-suse [class*="bg-violet-600"],
+html.theme-suse [class*="bg-violet-500"] { background-color: var(--accent) !important; }
+html.theme-suse [class*="bg-violet-600"]:hover,
+html.theme-suse [class*="bg-violet-500"]:hover { background-color: var(--accent-hover) !important; }
+html.theme-suse [class*="text-violet-600"],
+html.theme-suse [class*="text-violet-500"],
+html.theme-suse [class*="text-violet-400"] { color: var(--accent) !important; }
+html.theme-suse [class*="border-violet-"] { border-color: var(--accent) !important; }
+
+/* Gradient accent override para todos os temas SO */
+html[class*="theme-"] [class*="from-violet-"] {
+  --tw-gradient-from: var(--accent) var(--tw-gradient-from-position);
+}
+html[class*="theme-"] [class*="to-violet-"] {
+  --tw-gradient-to: var(--accent-hover) var(--tw-gradient-to-position);
+}
+
+/* Progress bars */
+html[class*="theme-"] .bg-violet-500 {
+  background-color: var(--accent) !important;
+}
+
+/* ── MakeStudio Theme ─────────────────────────────────── */
+html.theme-makestudio {
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-light: rgba(37, 99, 235, 0.14);
+  --card-radius: 12px;
+}
+
+/* MakeStudio Light */
+html.theme-makestudio:not(.dark) body { background-color: #f3f5f8 !important; }
+html.theme-makestudio:not(.dark) .bg-white { background-color: #FFFFFF !important; }
+html.theme-makestudio:not(.dark) .bg-gray-50,
+html.theme-makestudio:not(.dark) .bg-gray-100 { background-color: #edf2f7 !important; }
+html.theme-makestudio:not(.dark) .border-gray-200 { border-color: #d8e0ea !important; }
+
+/* MakeStudio Dark */
+html.dark.theme-makestudio { --sidebar-bg: #0f172a; --window-bg: #111827; }
+html.dark.theme-makestudio body { background-color: #0b1220 !important; }
+html.dark.theme-makestudio .dark\:bg-dark-bg,
+html.dark.theme-makestudio .dark\:bg-gray-900 { background-color: #0b1220 !important; }
+html.dark.theme-makestudio .dark\:bg-dark-card,
+html.dark.theme-makestudio .dark\:bg-gray-800 { background-color: #111827 !important; }
+html.dark.theme-makestudio .dark\:border-dark-border,
+html.dark.theme-makestudio .dark\:border-gray-700 { border-color: #243244 !important; }
+html.dark.theme-makestudio .dark\:border-gray-600 { border-color: #2d3f55 !important; }
+html.dark.theme-makestudio .dark\:hover\:bg-gray-700:hover { background-color: #1a2840 !important; }
+
+/* MakeStudio — accent (ambos os modos) */
+html.theme-makestudio .btn-primary,
+html.theme-makestudio [class*="bg-violet-600"],
+html.theme-makestudio [class*="bg-violet-500"] { background-color: var(--accent) !important; }
+html.theme-makestudio [class*="bg-violet-600"]:hover,
+html.theme-makestudio [class*="bg-violet-500"]:hover { background-color: var(--accent-hover) !important; }
+html.theme-makestudio [class*="text-violet-600"],
+html.theme-makestudio [class*="text-violet-500"],
+html.theme-makestudio [class*="text-violet-400"] { color: var(--accent) !important; }
+html.theme-makestudio [class*="border-violet-"] { border-color: var(--accent) !important; }
+
+/* ── Fim dos Temas de SO ──────────────────────────────── */
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-gradient-to-r from-primary-600 to-blue-600 bg-clip-text text-transparent;
+  }
+
+  .bg-gradient {
+    @apply bg-gradient-to-br from-primary-50 via-white to-blue-50;
+  }
+
+  .glass {
+    @apply bg-white/80 backdrop-blur-sm;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+/* Custom scrollbar - atualizado para modo escuro */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-600 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-500;
+}
+
+/* highlight.js — light theme (GitHub Light) */
+.hljs { background: #f6f8fa !important; color: #24292e !important; }
+.hljs-keyword, .hljs-selector-tag, .hljs-literal { color: #d73a49 !important; }
+.hljs-string, .hljs-doctag, .hljs-addition { color: #032f62 !important; }
+.hljs-comment, .hljs-quote, .hljs-meta { color: #6a737d !important; }
+.hljs-number, .hljs-regexp, .hljs-selector-class { color: #005cc5 !important; }
+.hljs-title, .hljs-section, .hljs-name { color: #6f42c1 !important; }
+.hljs-built_in, .hljs-type { color: #e36209 !important; }
+.hljs-attr, .hljs-attribute { color: #005cc5 !important; }
+.hljs-variable, .hljs-template-variable { color: #e36209 !important; }
+.hljs-symbol, .hljs-bullet { color: #005cc5 !important; }
+.hljs-deletion { color: #b31d28 !important; background: #ffeef0 !important; }
+
+/* highlight.js — dark theme (GitHub Dark) */
+.dark .hljs { background: #0d1117 !important; color: #c9d1d9 !important; }
+.dark .hljs-keyword, .dark .hljs-selector-tag, .dark .hljs-literal { color: #ff7b72 !important; }
+.dark .hljs-string, .dark .hljs-doctag, .dark .hljs-addition { color: #a5d6ff !important; }
+.dark .hljs-comment, .dark .hljs-quote, .dark .hljs-meta { color: #8b949e !important; }
+.dark .hljs-number, .dark .hljs-regexp, .dark .hljs-selector-class { color: #79c0ff !important; }
+.dark .hljs-title, .dark .hljs-section, .dark .hljs-name { color: #d2a8ff !important; }
+.dark .hljs-built_in, .dark .hljs-type { color: #ffa657 !important; }
+.dark .hljs-attr, .dark .hljs-attribute { color: #79c0ff !important; }
+.dark .hljs-variable, .dark .hljs-template-variable { color: #ffa657 !important; }
+.dark .hljs-symbol, .dark .hljs-bullet { color: #79c0ff !important; }
+.dark .hljs-deletion { color: #ffdcd7 !important; background: #67060c !important; }
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer-slide 1.5s ease-in-out infinite;
+}
+
+/* Message bubbles com suporte a modo escuro */
+.message-user {
+  @apply ml-auto max-w-xs rounded-2xl rounded-br-md bg-primary-600 px-4 py-2 text-white;
+}
+
+.message-assistant {
+  @apply mr-auto max-w-xs rounded-2xl rounded-bl-md bg-white dark:bg-gray-800 px-4 py-2 text-gray-900 dark:text-gray-100 shadow-sm border border-gray-200 dark:border-gray-700;
+}
+
+.message-system {
+  @apply mx-auto max-w-xs rounded-xl bg-gray-100 dark:bg-gray-800 px-3 py-2 text-center text-xs text-gray-600 dark:text-gray-400;
+}
+
+/* Markdown rendering styles for chat messages */
+.markdown-content {
+  @apply text-sm text-gray-900 dark:text-gray-100;
+}
+
+.markdown-content h1 {
+  @apply text-lg font-bold mb-2 mt-3 text-gray-900 dark:text-gray-100;
+}
+
+.markdown-content h2 {
+  @apply text-base font-bold mb-2 mt-2 text-gray-900 dark:text-gray-100;
+}
+
+.markdown-content h3 {
+  @apply text-sm font-semibold mb-1 mt-2 text-gray-900 dark:text-gray-100;
+}
+
+.markdown-content p {
+  @apply my-2 leading-relaxed;
+}
+
+.markdown-content strong {
+  @apply font-bold text-gray-900 dark:text-gray-100;
+}
+
+.markdown-content em {
+  @apply italic;
+}
+
+.markdown-content ul {
+  @apply my-2 pl-5 list-disc;
+}
+
+.markdown-content ol {
+  @apply my-2 pl-5 list-decimal;
+}
+
+.markdown-content li {
+  @apply my-1;
+}
+
+.markdown-content table {
+  @apply w-full my-3 border-collapse;
+}
+
+.markdown-content thead {
+  @apply bg-gray-100 dark:bg-gray-700;
+}
+
+.markdown-content th {
+  @apply p-2 text-left font-semibold border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700;
+}
+
+.markdown-content td {
+  @apply p-2 border border-gray-300 dark:border-gray-600;
+}
+
+.markdown-content tr:nth-child(even) {
+  @apply bg-gray-50 dark:bg-gray-800/30;
+}
+
+.markdown-content code {
+  @apply bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono;
+}
+
+.markdown-content pre {
+  @apply bg-gray-100 dark:bg-gray-800 p-3 rounded overflow-x-auto my-2;
+}
+
+.markdown-content pre code {
+  @apply bg-transparent p-0;
+}
+
+.markdown-content blockquote {
+  @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-2;
+}
+
+.markdown-content hr {
+  @apply my-4 border-gray-300 dark:border-gray-600;
+}
+
+.markdown-content a {
+  @apply text-blue-600 dark:text-blue-400 hover:underline;
+}
+
+/* Monaco editor — scrollbar track transparente (sem barra preta) */
+.monaco-editor .scrollbar.vertical .slider,
+.monaco-editor .scrollbar.vertical {
+  background: transparent !important;
+}
+.monaco-editor .decorationsOverviewRuler {
+  display: none !important;
+}
