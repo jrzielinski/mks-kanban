@@ -1,19 +1,17 @@
 /**
  * Kanban product — Electron main process.
  *
- * Loaded by `desktop/main.ts` when `MAKESTUDIO_PRODUCT=kanban`.
+ * Standalone embedded build:
+ *   - Forks the NestJS backend as a child Node (ELECTRON_RUN_AS_NODE=1)
+ *     pointed at the active board's `.sqlite` file inside userData.
+ *   - Waits for `/api/v1/health`, then logs in as the seeded admin and
+ *     pushes the session to the renderer via the existing auth bridge so
+ *     no login screen appears in normal desktop use.
+ *   - Loads `http://127.0.0.1:<port>/` — the backend serves the React app.
  *
- * Features by phase:
- *   Phase 1 — slim BrowserWindow + IPC auth bridge (safeStorage keychain)
- *   Phase 2 — splash screen, window state persistence, system tray,
- *             global shortcut Ctrl/Cmd+Shift+K
- *   Phase 3 — native OS notifications + dock/taskbar badge
- *   Phase 4 — deep links via makestudio-kanban:// protocol
- *
- * URL resolution (in order):
- *   1. KANBAN_TARGET_URL — explicit override (used by dev script)
- *   2. Default dev URL at :3022
- *   3. On-disk build inside extraResources: kanban-app/index.html
+ *   makestudio-kanban://open/...       deep-link protocol (Phase 4)
+ *   Ctrl/Cmd+Shift+K                   global show/focus shortcut
+ *   System tray + dock badge           Phase 2/3 features
  */
 
 import {
@@ -25,19 +23,22 @@ import {
   nativeImage,
   globalShortcut,
   Notification as ElectronNotification,
+  dialog,
 } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as http from 'http';
 import { readSession, writeSession, clearSession, AuthSession } from './authStore';
 import { loadWindowState, saveWindowState, WindowState } from './windowState';
 import { setupUpdater } from './updater';
+import * as backend from './backendProcess';
+import * as library from './boardLibrary';
 
 process.env.MAKESTUDIO_PRODUCT = process.env.MAKESTUDIO_PRODUCT || 'kanban';
 
 // ── Phase 4: deep-link protocol ───────────────────────────────────────────
 const PROTOCOL = 'makestudio-kanban';
 
-// Register the custom protocol client BEFORE app.ready.
 if (process.defaultApp && process.argv.length >= 2) {
   app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [
     path.resolve(process.argv[1]),
@@ -46,8 +47,6 @@ if (process.defaultApp && process.argv.length >= 2) {
   app.setAsDefaultProtocolClient(PROTOCOL);
 }
 
-// Single-instance lock: on Win/Linux, deep-link URLs arrive as argv of a
-// second-instance attempt. We forward to the running instance and quit the new one.
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
@@ -62,88 +61,42 @@ if (!gotSingleInstanceLock) {
   });
 }
 
-// macOS: OS delivers the URL via open-url (even before app.ready in packaged builds).
 app.on('open-url', (_event, url) => {
   _event.preventDefault();
   handleDeepLink(url);
 });
-
-// ─────────────────────────────────────────────────────────────────────────────
-
-const DEFAULT_DEV_URL = 'http://127.0.0.1:3022/kanban';
-const targetUrl = process.env.KANBAN_TARGET_URL || DEFAULT_DEV_URL;
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 let unmaximizedBounds: WindowState = { width: 1440, height: 960, maximized: false };
 
-// ── Splash screen HTML (no external assets, loads instantly) ──────────────
+// ── Splash screen HTML (no external assets) ───────────────────────────────
 const SPLASH_HTML = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  html,body{width:100%;height:100%;background:#111827}
-  body{
-    display:flex;flex-direction:column;
-    align-items:center;justify-content:center;
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  }
-  .icon{
-    width:72px;height:72px;
-    background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);
-    border-radius:18px;
-    display:flex;align-items:center;justify-content:center;
-    font-size:36px;margin-bottom:18px;
-    box-shadow:0 8px 32px rgba(99,102,241,.35);
-  }
-  h1{color:#f9fafb;font-size:17px;font-weight:600;letter-spacing:-.02em;margin-bottom:28px}
-  .track{width:140px;height:2px;background:#1f2937;border-radius:1px;overflow:hidden}
-  .bar{
-    height:100%;
-    background:linear-gradient(90deg,#6366f1,#a78bfa);
-    border-radius:1px;
-    animation:shimmer 1.4s ease-in-out infinite;
-  }
-  @keyframes shimmer{
-    0%  {width:0%;margin-left:0%}
-    40% {width:60%;margin-left:20%}
-    100%{width:0%;margin-left:100%}
-  }
-</style>
-</head>
-<body>
-  <div class="icon">&#x1F4CB;</div>
-  <h1>MakeStudio Kanban</h1>
-  <div class="track"><div class="bar"></div></div>
-</body>
-</html>`;
-
-// ── Helpers ────────────────────────────────────────────────────────────────
+<html><head><meta charset="UTF-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#111827}
+body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+.icon{width:72px;height:72px;background:linear-gradient(135deg,#6366f1 0%,#8b5cf6 100%);
+  border-radius:18px;display:flex;align-items:center;justify-content:center;
+  font-size:36px;margin-bottom:18px;box-shadow:0 8px 32px rgba(99,102,241,.35)}
+h1{color:#f9fafb;font-size:17px;font-weight:600;letter-spacing:-.02em;margin-bottom:8px}
+small{color:#94a3b8;font-size:12px;margin-bottom:20px}
+.track{width:140px;height:2px;background:#1f2937;border-radius:1px;overflow:hidden}
+.bar{height:100%;background:linear-gradient(90deg,#6366f1,#a78bfa);border-radius:1px;
+  animation:shimmer 1.4s ease-in-out infinite}
+@keyframes shimmer{0%{width:0%;margin-left:0%}40%{width:60%;margin-left:20%}100%{width:0%;margin-left:100%}}
+</style></head><body>
+<div class="icon">&#x1F4CB;</div><h1>MakeStudio Kanban</h1>
+<small id="msg">iniciando…</small>
+<div class="track"><div class="bar"></div></div>
+</body></html>`;
 
 function getIconPath(): string {
-  // dist/main.js → ../assets/kanban/icon.png
   return path.join(__dirname, '..', 'assets', 'kanban', 'icon.png');
 }
 
-function resolveProdEntry(): string | null {
-  const candidates = [
-    // packaged app: extraResources/kanban-app/
-    path.join(process.resourcesPath, 'kanban-app', 'index.html'),
-    // dev: frontend/dist/ sibling directory
-    path.join(__dirname, '..', '..', 'frontend', 'dist', 'index.html'),
-  ];
-  for (const c of candidates) {
-    if (fs.existsSync(c)) return c;
-  }
-  return null;
-}
-
-// ── Phase 4: deep-link handler ────────────────────────────────────────────
-// URL format: makestudio-kanban://open/kanban/<boardId>
-// The host ("open") is ignored; the pathname maps directly to app routes.
 function handleDeepLink(url: string): void {
   try {
     const parsed = new URL(url);
@@ -157,12 +110,72 @@ function handleDeepLink(url: string): void {
   }
 }
 
-// ── Splash window ──────────────────────────────────────────────────────────
+// ── Backend bootstrap helpers ────────────────────────────────────────────
+
+/** Ensure there is at least one board file in the library and one active. */
+function ensureActiveBoard(): library.BoardLibraryEntry {
+  const active = library.getActive();
+  if (active && fs.existsSync(active.filePath)) return active;
+  // Fall back to most recently opened…
+  const entries = library.list().filter((e) => fs.existsSync(e.filePath));
+  if (entries.length > 0) return library.setActive(entries[0].id)!;
+  // …or create a fresh "Meu Kanban" file.
+  const fresh = library.create('Meu Kanban');
+  return library.setActive(fresh.id)!;
+}
+
+/** Log in as the seeded admin against the embedded backend and push the
+ *  session to the renderer via the existing auth bridge. */
+async function loginSeededAdmin(): Promise<AuthSession | null> {
+  const { email, password } = backend.getAdminCredentials();
+  const origin = backend.getOrigin();
+  return new Promise((resolve) => {
+    const body = JSON.stringify({ email, password });
+    const url = new URL('/api/v1/auth/email/login', origin);
+    const req = http.request(
+      {
+        method: 'POST',
+        host: url.hostname,
+        port: Number(url.port),
+        path: url.pathname,
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c) => chunks.push(c));
+        res.on('end', () => {
+          try {
+            const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+            if (json?.token && json?.user) {
+              const session: AuthSession = {
+                token: json.token,
+                refreshToken: json.refreshToken,
+                user: json.user,
+              };
+              writeSession(session);
+              resolve(session);
+            } else resolve(null);
+          } catch {
+            resolve(null);
+          }
+        });
+      },
+    );
+    req.on('error', () => resolve(null));
+    req.write(body);
+    req.end();
+  });
+}
+
+// ── Splash window ────────────────────────────────────────────────────────
 
 function createSplash(): BrowserWindow {
   const splash = new BrowserWindow({
     width: 400,
-    height: 260,
+    height: 280,
     frame: false,
     center: true,
     resizable: false,
@@ -175,7 +188,7 @@ function createSplash(): BrowserWindow {
   return splash;
 }
 
-// ── System tray ────────────────────────────────────────────────────────────
+// ── System tray ──────────────────────────────────────────────────────────
 
 function createTray(): void {
   const iconPath = getIconPath();
@@ -191,7 +204,7 @@ function createTray(): void {
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.focus();
     } else {
-      createWindow();
+      void createWindow();
     }
   };
 
@@ -199,7 +212,13 @@ function createTray(): void {
     Menu.buildFromTemplate([
       { label: 'Abrir MakeStudio Kanban', click: showWindow },
       { type: 'separator' },
-      { label: 'Sair', click: () => { isQuitting = true; app.quit(); } },
+      {
+        label: 'Sair',
+        click: () => {
+          isQuitting = true;
+          app.quit();
+        },
+      },
     ]),
   );
 
@@ -207,9 +226,9 @@ function createTray(): void {
   tray.on('double-click', showWindow);
 }
 
-// ── Main window ────────────────────────────────────────────────────────────
+// ── Main window ──────────────────────────────────────────────────────────
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
   const ws = loadWindowState();
   unmaximizedBounds = { ...ws };
 
@@ -239,14 +258,10 @@ function createWindow(): void {
     mainWindow.setMenuBarVisibility(false);
   }
 
-  // ── Splash lifecycle ─────────────────────────────────────────────────────
   let splashDismissed = false;
-  let splashTimeout: ReturnType<typeof setTimeout>;
-
   const dismissSplash = () => {
     if (splashDismissed) return;
     splashDismissed = true;
-    clearTimeout(splashTimeout);
     if (!splash.isDestroyed()) splash.close();
     if (mainWindow && !mainWindow.isDestroyed() && !mainWindow.isVisible()) {
       mainWindow.show();
@@ -256,13 +271,12 @@ function createWindow(): void {
 
   mainWindow.webContents.once('did-finish-load', dismissSplash);
   mainWindow.webContents.once('did-fail-load', dismissSplash);
-  splashTimeout = setTimeout(dismissSplash, 10_000);
+  const splashTimeout = setTimeout(dismissSplash, 30_000);
 
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
   }
 
-  // ── Logging ──────────────────────────────────────────────────────────────
   mainWindow.webContents.on('render-process-gone', (_e, details) => {
     // eslint-disable-next-line no-console
     console.error('[product:kanban] renderer crashed:', details);
@@ -277,7 +291,6 @@ function createWindow(): void {
     console.log(`[renderer:${tag}] ${message}  (${sourceId}:${line})`);
   });
 
-  // ── Window state tracking ─────────────────────────────────────────────────
   const updateBounds = () => {
     if (mainWindow && !mainWindow.isMaximized() && !mainWindow.isMinimized()) {
       unmaximizedBounds = { ...mainWindow.getBounds(), maximized: false };
@@ -286,7 +299,6 @@ function createWindow(): void {
   mainWindow.on('resize', updateBounds);
   mainWindow.on('move', updateBounds);
 
-  // ── Close: persist state + minimize-to-tray on Win/Linux ─────────────────
   mainWindow.on('close', (e) => {
     saveWindowState({ ...unmaximizedBounds, maximized: mainWindow!.isMaximized() });
     if (!isQuitting && process.platform !== 'darwin') {
@@ -295,26 +307,36 @@ function createWindow(): void {
     }
   });
 
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 
-  // ── Load the renderer ─────────────────────────────────────────────────────
+  // ── Boot embedded backend pointing at the active board file ────────────
+  try {
+    const active = ensureActiveBoard();
+    await backend.start({ databasePath: active.filePath });
+    await backend.waitForHealth();
+    await loginSeededAdmin();
+  } catch (err) {
+    clearTimeout(splashTimeout);
+    dismissSplash();
+    // eslint-disable-next-line no-console
+    console.error('[product:kanban] backend failed to start:', err);
+    dialog.showErrorBox(
+      'Falha ao iniciar',
+      `Não foi possível iniciar o backend embutido.\n\n${(err as Error).message}`,
+    );
+    app.quit();
+    return;
+  }
+
+  const url = `${backend.getOrigin()}/`;
   // eslint-disable-next-line no-console
-  console.log(`[product:kanban] loading ${targetUrl}`);
-  mainWindow
-    .loadURL(targetUrl)
-    .catch((err) => {
-      // eslint-disable-next-line no-console
-      console.warn('[product:kanban] loadURL failed, trying on-disk entry', err?.message);
-      const prodEntry = resolveProdEntry();
-      if (prodEntry && mainWindow) return mainWindow.loadFile(prodEntry);
-      throw new Error(
-        'kanban entry not reachable: Vite at :3022 is down and no frontend/dist/index.html on disk',
-      );
-    })
-    .catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('[product:kanban] failed to load any entry', err);
-    });
+  console.log(`[product:kanban] loading ${url}`);
+  mainWindow.loadURL(url).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('[product:kanban] failed to load renderer', err);
+  });
 }
 
 // ── IPC handlers ──────────────────────────────────────────────────────────
@@ -337,26 +359,63 @@ ipcMain.handle('kanban:notify', (_e, { title, body }: { title: string; body: str
   n.show();
 });
 
-// Phase 3 — dock/taskbar badge
 ipcMain.handle('kanban:badge', (_e, count: number) => {
   if (process.platform === 'darwin' && app.dock) {
     app.dock.setBadge(count > 0 ? String(count) : '');
   }
-  // Windows overlay icon omitted for now (requires nativeImage generation).
+});
+
+// Board library — file-per-board model
+ipcMain.handle('boardLibrary:list', () => library.list());
+ipcMain.handle('boardLibrary:active', () => library.getActive());
+ipcMain.handle('boardLibrary:create', (_e, name: string) => library.create(name));
+ipcMain.handle('boardLibrary:rename', (_e, id: string, name: string) =>
+  library.rename(id, name),
+);
+ipcMain.handle(
+  'boardLibrary:remove',
+  (_e, id: string, deleteFile?: boolean) => library.remove(id, deleteFile),
+);
+
+/** Open a board file: restart the embedded backend pointing at it, then
+ *  re-login the renderer. Returns the fresh auth session for seedAuth. */
+ipcMain.handle('boardLibrary:open', async (_e, id: string) => {
+  const entry = library.setActive(id);
+  if (!entry) throw new Error(`board ${id} not in library`);
+  await backend.switchTo(entry.filePath);
+  const session = await loginSeededAdmin();
+  // Tell the renderer to reload at /kanban so it sees the new file.
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.loadURL(`${backend.getOrigin()}/kanban`).catch(() => {});
+  }
+  return { entry, session };
+});
+
+ipcMain.handle('boardLibrary:import', async () => {
+  if (!mainWindow) return null;
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: 'Importar board (.sqlite)',
+    filters: [{ name: 'Board', extensions: ['sqlite', 'db'] }],
+    properties: ['openFile'],
+  });
+  if (res.canceled || res.filePaths.length === 0) return null;
+  return library.importFile(res.filePaths[0]);
 });
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.setName('MakeStudio Kanban');
 
-app.on('before-quit', () => { isQuitting = true; });
+app.on('before-quit', async () => {
+  isQuitting = true;
+  await backend.stop();
+});
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createTray();
-  createWindow();
+  await createWindow();
 
-  // Global shortcut: Ctrl/Cmd+Shift+K → show/focus
   const shortcutRegistered = globalShortcut.register('CommandOrControl+Shift+K', () => {
-    if (!mainWindow) createWindow();
+    if (!mainWindow) void createWindow();
     else {
       if (!mainWindow.isVisible()) mainWindow.show();
       mainWindow.focus();
@@ -368,19 +427,20 @@ app.whenReady().then(() => {
   }
 
   app.on('activate', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) createWindow();
-    else { mainWindow.show(); mainWindow.focus(); }
+    if (!mainWindow || mainWindow.isDestroyed()) void createWindow();
+    else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
 
-  // Phase 5 — auto-updater (production only)
   if (process.env.NODE_ENV !== 'development' && mainWindow) {
     setupUpdater(mainWindow);
   }
 });
 
 app.on('window-all-closed', () => {
-  // Intentionally empty — tray keeps the app alive.
-  // Quit only happens via tray → "Sair" (sets isQuitting = true → app.quit()).
+  // tray keeps the app alive
 });
 
 app.on('will-quit', () => {

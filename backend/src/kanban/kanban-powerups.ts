@@ -10,6 +10,7 @@ import { KanbanBoardEntity, KanbanBoardMember } from './entities/kanban-board.en
 import { KanbanListEntity } from './entities/kanban-list.entity';
 import { KanbanCardEntity } from './entities/kanban-card.entity';
 import { KanbanCardActivityEntity, ActivityType } from './entities/kanban-card-activity.entity';
+import { jsonArrayContains, jsonArrayObjectFieldEquals, jsonArrayLength } from '../database/json-sql';
 import { KanbanNotificationEntity } from './entities/kanban-notification.entity';
 import { KanbanWorkspaceEntity } from './entities/kanban-workspace.entity';
 import { KanbanBoardStarEntity } from './entities/kanban-board-star.entity';
@@ -59,16 +60,16 @@ export async function advancedSearch_helper(service: KanbanService, tenantId: st
     .andWhere('c.is_archived = false');
 
   if (dto.q?.trim()) {
-    qb.andWhere('(c.title ILIKE :q OR c.description ILIKE :q)', { q: `%${dto.q.trim()}%` });
+    qb.andWhere('(LOWER(c.title) LIKE LOWER(:q) OR LOWER(c.description) LIKE LOWER(:q))', { q: `%${dto.q.trim()}%` });
   }
   if (dto.boardId) qb.andWhere('c.board_id = :boardId', { boardId: dto.boardId });
   if (dto.listId) qb.andWhere('c.list_id = :listId', { listId: dto.listId });
-  if (dto.memberId) qb.andWhere('c.member_ids @> :mid', { mid: JSON.stringify([dto.memberId]) });
-  if (dto.labelColor) qb.andWhere('c.labels @> :lbl', { lbl: JSON.stringify([{ color: dto.labelColor }]) });
+  if (dto.memberId) qb.andWhere(jsonArrayContains('c.member_ids', 'mid'), { mid: dto.memberId });
+  if (dto.labelColor) qb.andWhere(jsonArrayObjectFieldEquals('c.labels', 'color', 'lbl'), { lbl: dto.labelColor });
   if (dto.dueBefore) qb.andWhere('c.due_date <= :dueBefore', { dueBefore: new Date(dto.dueBefore) });
   if (dto.dueAfter) qb.andWhere('c.due_date >= :dueAfter', { dueAfter: new Date(dto.dueAfter) });
-  if (dto.hasAttachment === true) qb.andWhere("jsonb_array_length(c.attachments) > 0");
-  if (dto.isOverdue === true) qb.andWhere('c.due_date < NOW()');
+  if (dto.hasAttachment === true) qb.andWhere(`${jsonArrayLength('c.attachments')} > 0`);
+  if (dto.isOverdue === true) qb.andWhere('c.due_date < :now', { now: new Date() });
   if (dto.workspaceId) {
     const boardsInWs = await (service as any).boardRepo.find({ where: { workspaceId: dto.workspaceId, tenantId }, select: ['id'] });
     const boardIds = boardsInWs.map(b => b.id);

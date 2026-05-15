@@ -12,6 +12,11 @@ import { ConnectionBadge } from './ConnectionBadge';
 const Login = lazy(() =>
   import('@/pages/auth/Login').then((m) => ({ default: (m as any).Login ?? (m as any).default })),
 );
+const Register = lazy(() =>
+  import('@/pages/auth/Register').then((m) => ({
+    default: (m as any).Register ?? (m as any).default,
+  })),
+);
 const KanbanBoardsPage = lazy(() =>
   import('@/pages/KanbanBoardsPage').then((m) => ({
     default: (m as any).KanbanBoardsPage ?? (m as any).default,
@@ -52,6 +57,10 @@ export const KanbanApp: React.FC = () => {
           <Route
             path="/login"
             element={isAuthenticated ? <Navigate to="/kanban" replace /> : <Login />}
+          />
+          <Route
+            path="/register"
+            element={isAuthenticated ? <Navigate to="/kanban" replace /> : <Register />}
           />
           <Route
             path="/kanban"

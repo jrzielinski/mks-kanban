@@ -10,6 +10,7 @@ import { KanbanCardEntity } from './entities/kanban-card.entity';
 import { KanbanListEntity } from './entities/kanban-list.entity';
 import { KanbanBoardEntity } from './entities/kanban-board.entity';
 import { KanbanCardActivityEntity } from './entities/kanban-card-activity.entity';
+import { jsonField } from '../database/json-sql';
 
 const GH_ISSUE_NUMBER = '__githubIssueNumber';
 const GH_ISSUE_URL = '__githubIssueUrl';
@@ -378,7 +379,7 @@ export class KanbanGithubPowerUpService {
       .createQueryBuilder('c')
       .where('c.tenant_id = :tenantId', { tenantId })
       .andWhere('c.board_id = :boardId', { boardId })
-      .andWhere(`c.custom_fields ->> '${field}' = :value`, { value: String(value) })
+      .andWhere(`${jsonField('c.custom_fields', field)} = :value`, { value: String(value) })
       .getMany();
     return cards[0] || null;
   }

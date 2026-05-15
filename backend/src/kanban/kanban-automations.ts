@@ -10,6 +10,7 @@ import { KanbanBoardEntity, KanbanBoardMember } from './entities/kanban-board.en
 import { KanbanListEntity } from './entities/kanban-list.entity';
 import { KanbanCardEntity } from './entities/kanban-card.entity';
 import { KanbanCardActivityEntity, ActivityType } from './entities/kanban-card-activity.entity';
+import { jsonArrayContains } from '../database/json-sql';
 import { KanbanNotificationEntity } from './entities/kanban-notification.entity';
 import { KanbanWorkspaceEntity } from './entities/kanban-workspace.entity';
 import { KanbanBoardStarEntity } from './entities/kanban-board-star.entity';
@@ -205,7 +206,7 @@ export async function checkAndEmitUnblockedCards_helper(service: KanbanService, 
     .createQueryBuilder('c')
     .where('c.tenant_id = :tenantId', { tenantId })
     .andWhere('c.board_id = :boardId', { boardId })
-    .andWhere(`c.blocked_by @> :ids::jsonb`, { ids: JSON.stringify([resolvedCardId]) })
+    .andWhere(jsonArrayContains('c.blocked_by', 'blockerId'), { blockerId: resolvedCardId })
     .getMany();
 
   for (const dep of dependents) {

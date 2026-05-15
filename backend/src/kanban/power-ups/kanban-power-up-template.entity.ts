@@ -33,13 +33,13 @@ export class KanbanPowerUpTemplateEntity {
   @Column({ default: '⚡' }) icon: string;
   @Column({ nullable: true, type: 'text' }) description: string | null;
   @Column({ type: 'varchar' }) mode: PowerUpMode;
-  @Column({ name: 'trigger_events', type: 'jsonb', default: '[]' }) triggerEvents: KanbanEventKey[];
+  @Column({ name: 'trigger_events', type: 'simple-json', default: '[]' }) triggerEvents: KanbanEventKey[];
   @Column({ nullable: true, type: 'text' }) url: string | null;
-  @Column({ name: 'headers_template', type: 'jsonb', nullable: true }) headersTemplate: Record<string, string> | null;
-  @Column({ name: 'payload_template', type: 'jsonb', nullable: true }) payloadTemplate: Record<string, unknown> | null;
-  @Column({ name: 'config_schema', type: 'jsonb', default: '[]' }) configSchema: PowerUpConfigField[];
+  @Column({ name: 'headers_template', type: 'simple-json', nullable: true }) headersTemplate: Record<string, string> | null;
+  @Column({ name: 'payload_template', type: 'simple-json', nullable: true }) payloadTemplate: Record<string, unknown> | null;
+  @Column({ name: 'config_schema', type: 'simple-json', default: '[]' }) configSchema: PowerUpConfigField[];
   @Column({ nullable: true, type: 'text' }) script: string | null;
-  @Column({ name: 'response_mapping', type: 'jsonb', nullable: true }) responseMapping: ResponseMappingAction[] | null;
+  @Column({ name: 'response_mapping', type: 'simple-json', nullable: true }) responseMapping: ResponseMappingAction[] | null;
   @Column({ type: 'varchar', default: 'draft' }) status: PowerUpStatus;
   @Column({ name: 'rejection_reason', nullable: true, type: 'text' }) rejectionReason: string | null;
   @CreateDateColumn({ name: 'created_at' }) createdAt: Date;

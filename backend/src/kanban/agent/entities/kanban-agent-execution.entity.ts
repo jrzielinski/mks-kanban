@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 import { ExecType } from './kanban-list-agent-config.entity';
+import { TIMESTAMP_TYPE } from '../../../database/column-types';
 
 export type ExecStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
@@ -53,10 +54,10 @@ export class KanbanAgentExecutionEntity {
   @Column({ name: 'agent_machine', type: 'varchar', nullable: true })
   agentMachine: string | null;
 
-  @Column({ name: 'started_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'started_at', type: TIMESTAMP_TYPE, nullable: true })
   startedAt: Date | null;
 
-  @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
+  @Column({ name: 'completed_at', type: TIMESTAMP_TYPE, nullable: true })
   completedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

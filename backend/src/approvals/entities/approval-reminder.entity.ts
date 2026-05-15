@@ -7,6 +7,7 @@ import {
   CreateDateColumn,
   Index,
 } from 'typeorm';
+import { TIMESTAMP_TYPE } from '../../database/column-types';
 
 export type ReminderType = 'initial' | 'reminder' | 'escalation' | 'expiration';
 export type ReminderChannel = 'email' | 'whatsapp' | 'sms';
@@ -31,7 +32,7 @@ export class ApprovalReminderEntity {
   })
   reminderType: ReminderType;
 
-  @Column({ name: 'sentAt', type: 'timestamp', default: () => 'NOW()' })
+  @Column({ name: 'sentAt', type: TIMESTAMP_TYPE, default: () => 'CURRENT_TIMESTAMP' })
   sentAt: Date;
 
   @Column({ name: 'recipientId', nullable: true })

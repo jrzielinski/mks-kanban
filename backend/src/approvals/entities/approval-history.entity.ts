@@ -43,7 +43,7 @@ export class ApprovalHistoryEntity {
   @Column({ type: 'text', nullable: true })
   comments: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   metadata: Record<string, any>;
 
   @CreateDateColumn({ name: 'createdAt' })

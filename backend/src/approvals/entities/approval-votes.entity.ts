@@ -38,7 +38,7 @@ export class ApprovalVotesEntity {
   @Column({ type: 'text', nullable: true })
   comments: string;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   responseData: Record<string, any>;
 
   @CreateDateColumn({ name: 'votedAt' })

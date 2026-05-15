@@ -102,7 +102,7 @@ export class KanbanPowerUpEntity {
   @Column({ name: 'template_id', type: 'varchar', nullable: true })
   templateId: string | null;
 
-  @Column({ type: 'jsonb', default: '{}' })
+  @Column({ type: 'simple-json', default: '{}' })
   config: KanbanSlackConfig | KanbanGithubConfig | KanbanJiraConfig | KanbanGoogleDriveConfig | KanbanConfluenceConfig | KanbanGiphyConfig | KanbanEmailToCardConfig | KanbanBurndownConfig;
 
   @Column({ default: true })

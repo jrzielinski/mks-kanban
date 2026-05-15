@@ -8,6 +8,7 @@ import { KanbanBoardEntity } from './entities/kanban-board.entity';
 import { KanbanNotificationEntity } from './entities/kanban-notification.entity';
 import { KanbanCardActivityEntity } from './entities/kanban-card-activity.entity';
 import { KanbanMailService } from './kanban-mail.service';
+import { jsonField } from '../database/json-sql';
 
 @Injectable()
 export class KanbanDueNotificationService {
@@ -270,7 +271,7 @@ export class KanbanDueNotificationService {
         .createQueryBuilder('card')
         .where('card.is_archived = false')
         .andWhere('card.tenant_id IS NOT NULL')
-        .andWhere("card.custom_fields->>'__snoozedUntil' IS NOT NULL")
+        .andWhere(`${jsonField('card.custom_fields', '__snoozedUntil')} IS NOT NULL`)
         .getMany();
 
       let woken = 0;

@@ -79,13 +79,13 @@ export class KanbanBoardEntity {
   @Column({ name: 'owner_id', nullable: true, type: 'varchar' })
   ownerId: string | null;
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   members: KanbanBoardMember[];
 
-  @Column({ name: 'board_labels', type: 'jsonb', default: '[]' })
+  @Column({ name: 'board_labels', type: 'simple-json', default: '[]' })
   boardLabels: KanbanBoardLabel[];
 
-  @Column({ name: 'automation_rules', type: 'jsonb', default: '[]' })
+  @Column({ name: 'automation_rules', type: 'simple-json', default: '[]' })
   automationRules: KanbanAutomationRule[];
 
   @Column({ nullable: true, type: 'varchar' })
@@ -97,7 +97,7 @@ export class KanbanBoardEntity {
   @Column({ name: 'background_image', nullable: true, type: 'varchar' })
   backgroundImage: string | null;
 
-  @Column({ name: 'custom_field_defs', type: 'jsonb', default: '[]' })
+  @Column({ name: 'custom_field_defs', type: 'simple-json', default: '[]' })
   customFieldDefs: KanbanCustomFieldDef[];
 
   @Column({ name: 'is_archived', default: false })
@@ -120,11 +120,11 @@ export class KanbanBoardEntity {
   isTemplate: boolean;
 
   // #37 watched by (user IDs)
-  @Column({ name: 'watched_by', type: 'jsonb', default: '[]' })
+  @Column({ name: 'watched_by', type: 'simple-json', default: '[]' })
   watchedBy: string[];
 
   // C5: Granular permissions
-  @Column({ type: 'jsonb', default: '{}' })
+  @Column({ type: 'simple-json', default: '{}' })
   permissions: {
     membersCanComment?: boolean;
     membersCanEditCards?: boolean;

@@ -3,7 +3,25 @@ import { io, Socket } from 'socket.io-client';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '@/store/auth';
 // @ts-ignore
-import makestudioIcon from '../../assets/makestudioicon.png';
+// Inline SVG so the loading splash has no external asset dependency in the
+// standalone build. Kept as a data URI to preserve the existing <img src={…}>
+// site without a layout rewrite.
+const makestudioIcon =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+       <defs>
+         <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+           <stop offset="0%" stop-color="#22d3ee"/>
+           <stop offset="100%" stop-color="#8b5cf6"/>
+         </linearGradient>
+       </defs>
+       <rect x="4" y="6" width="56" height="52" rx="12" fill="url(#g)"/>
+       <rect x="12" y="16" width="10" height="32" rx="2" fill="rgba(255,255,255,0.92)"/>
+       <rect x="27" y="16" width="10" height="22" rx="2" fill="rgba(255,255,255,0.78)"/>
+       <rect x="42" y="16" width="10" height="14" rx="2" fill="rgba(255,255,255,0.62)"/>
+     </svg>`,
+  );
 
 import { useParams, useNavigate } from 'react-router-dom';
 import {

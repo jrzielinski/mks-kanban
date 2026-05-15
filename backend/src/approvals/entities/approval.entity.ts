@@ -7,6 +7,7 @@ import {
   Index,
   OneToMany,
 } from 'typeorm';
+import { TIMESTAMP_TYPE } from '../../database/column-types';
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled';
 export type ApprovalPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -76,25 +77,25 @@ export class ApprovalEntity {
   })
   approvalStrategy: ApprovalStrategy;
 
-  @Column({ type: 'jsonb', nullable: true, name: 'sequentialApprovers' })
+  @Column({ type: 'simple-json', nullable: true, name: 'sequentialApprovers' })
   sequentialApprovers: SequentialApprover[];
 
   @Column({ name: 'currentApproverIndex', nullable: true, default: 0 })
   currentApproverIndex: number;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   requestData: Record<string, any>;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   responseData: Record<string, any>;
 
   @Column({ type: 'text', nullable: true })
   comments: string;
 
-  @Column({ name: 'expiresAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'expiresAt', type: TIMESTAMP_TYPE, nullable: true })
   expiresAt: Date;
 
-  @Column({ name: 'respondedAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'respondedAt', type: TIMESTAMP_TYPE, nullable: true })
   respondedAt: Date;
 
   @Column({ name: 'escalationLevel', default: 0 })
@@ -110,7 +111,7 @@ export class ApprovalEntity {
   timeoutAction?: TimeoutAction;
 
   // Escalation Rules - Regras de escalação automática
-  @Column({ type: 'jsonb', nullable: true, name: 'escalationRules' })
+  @Column({ type: 'simple-json', nullable: true, name: 'escalationRules' })
   escalationRules?: EscalationRule[];
 
   // Reassignment - Campos para reatribuição
@@ -120,7 +121,7 @@ export class ApprovalEntity {
   @Column({ type: 'text', nullable: true, name: 'reassignmentReason' })
   reassignmentReason?: string;
 
-  @Column({ name: 'reassignedAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'reassignedAt', type: TIMESTAMP_TYPE, nullable: true })
   reassignedAt?: Date;
 
   // Delegation - Campos para delegação
@@ -130,15 +131,15 @@ export class ApprovalEntity {
   @Column({ name: 'delegatedById', nullable: true })
   delegatedById?: string;
 
-  @Column({ name: 'delegatedAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'delegatedAt', type: TIMESTAMP_TYPE, nullable: true })
   delegatedAt?: Date;
 
   // Escalation Tracking - Rastreio de escalações
-  @Column({ name: 'lastEscalatedAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'lastEscalatedAt', type: TIMESTAMP_TYPE, nullable: true })
   lastEscalatedAt?: Date;
 
   // Notification Tracking - Rastreio de notificações
-  @Column({ name: 'lastNotifiedAt', type: 'timestamp', nullable: true })
+  @Column({ name: 'lastNotifiedAt', type: TIMESTAMP_TYPE, nullable: true })
   lastNotifiedAt?: Date;
 
   @Column({ name: 'notificationCount', default: 0 })

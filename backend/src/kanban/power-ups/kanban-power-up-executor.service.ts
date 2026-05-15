@@ -10,9 +10,20 @@ import { KanbanBoardEntity } from '../entities/kanban-board.entity';
 import { KanbanCardEntity } from '../entities/kanban-card.entity';
 import { KanbanCardActivityEntity } from '../entities/kanban-card-activity.entity';
 import { KanbanGateway } from '../kanban.gateway';
+import { jsonArrayContains } from '../../database/json-sql';
 import { KanbanCardEventPayload, KanbanEventKey } from './types';
 
-const ivm = require('isolated-vm');
+// `isolated-vm` powers sandboxed user-script power-ups. It's a heavy native
+// module that's awkward to ship in the Electron build, so it's optional —
+// when missing, the backend still boots and only `mode === 'script'`
+// power-ups fail at execution time.
+let ivm: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  ivm = require('isolated-vm');
+} catch {
+  // not installed — runScript() will throw a clear error if invoked
+}
 
 @Injectable()
 export class KanbanPowerUpExecutorService {
@@ -71,7 +82,7 @@ export class KanbanPowerUpExecutorService {
       .andWhere('i.tenant_id = :tenantId', { tenantId: payload.tenantId })
       .andWhere('i.enabled = true')
       .andWhere('i.template_id IS NOT NULL')
-      .andWhere(`t.trigger_events @> :event::jsonb`, { event: JSON.stringify([eventKey]) })
+      .andWhere(jsonArrayContains('t.trigger_events', 'eventKey'), { eventKey })
       .select(['i.id', 'i.templateId', 'i.config', 'i.boardId', 'i.tenantId'])
       .getRawMany();
 
@@ -193,6 +204,11 @@ export class KanbanPowerUpExecutorService {
     ctx: Record<string, unknown>,
     config: Record<string, string>,
   ): Promise<{ statusCode: number | null; responseSnippet: string | null; responseBody: any }> {
+    if (!ivm) {
+      throw new Error(
+        'Script-mode power-ups are unavailable in this build (isolated-vm is not installed).',
+      );
+    }
     const isolate = new ivm.Isolate({ memoryLimit: 32 });
     const context = await isolate.createContext();
     const jail = context.global;

@@ -48,10 +48,15 @@ function kanbanAppFallbackPlugin(): Plugin {
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiUrl = env.VITE_API_URL || 'https://api.zielinski.dev.br';
+  // Dev proxy target — the local NestJS backend by default. Override with
+  // VITE_API_URL only when you really need to point at a remote API.
+  const apiUrl = env.VITE_API_URL || 'http://localhost:3100';
   const isProd = mode === 'production';
+  // Base path: '/' for the web build (backend serves it from root) and
+  // './' for Electron (loaded via file://). Override with VITE_BASE.
+  const base = env.VITE_BASE || (isProd ? '/' : '/');
   return {
-    base: isProd ? './' : '/',
+    base,
     plugins: [react(), kanbanAppFallbackPlugin()],
     resolve: {
       alias: {

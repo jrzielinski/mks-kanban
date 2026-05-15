@@ -9,6 +9,7 @@ import { KanbanCardEntity } from './entities/kanban-card.entity';
 import { KanbanListEntity } from './entities/kanban-list.entity';
 import { KanbanBoardEntity } from './entities/kanban-board.entity';
 import { KanbanCardActivityEntity } from './entities/kanban-card-activity.entity';
+import { jsonField } from '../database/json-sql';
 
 /** Internal keys stored in card.customFields for Jira link */
 const JIRA_ISSUE_KEY = '__jiraIssueKey';
@@ -183,7 +184,7 @@ export class KanbanJiraPowerUpService {
       .createQueryBuilder('c')
       .where('c.tenant_id = :tenantId', { tenantId })
       .andWhere('c.board_id = :boardId', { boardId })
-      .andWhere(`c.custom_fields ->> '${JIRA_ISSUE_KEY}' = :issueKey`, { issueKey })
+      .andWhere(`${jsonField('c.custom_fields', JIRA_ISSUE_KEY)} = :issueKey`, { issueKey })
       .getMany();
 
     const card = cards[0];

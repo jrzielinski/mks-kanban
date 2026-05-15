@@ -11,8 +11,26 @@ export class AgentCoreService {
     return 0;
   }
 
-  async dispatchTask(task: unknown): Promise<{ jobId: string }> {
+  /**
+   * In the monolith this dispatches an AI coding task and waits for the
+   * worker to report back with content, cost, and git activity. In the
+   * standalone build it's a no-op — accept the same call shape and return
+   * an empty result so callers (e.g. KanbanAgentService) compile and
+   * degrade gracefully.
+   */
+  async dispatchTask(..._args: unknown[]): Promise<AgentDispatchResult> {
     this.logger.warn('AgentCoreService.dispatchTask: stub — agent-core not available');
     return { jobId: 'stub-' + Date.now() };
   }
+}
+
+export interface AgentDispatchResult {
+  jobId: string;
+  content?: string;
+  costUsd?: number;
+  gitInfo?: {
+    branch?: string;
+    commits?: number;
+    pushed?: boolean;
+  };
 }

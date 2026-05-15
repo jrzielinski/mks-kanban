@@ -19,9 +19,24 @@
   ],
   "extraResources": [
     {
+      "from": "../backend/dist",
+      "to": "app-backend/dist"
+    },
+    {
+      "from": "../backend/node_modules",
+      "to": "app-backend/node_modules"
+    },
+    {
+      "from": "../backend/package.json",
+      "to": "app-backend/package.json"
+    },
+    {
       "from": "../frontend/dist",
-      "to": "kanban-app"
+      "to": "app-frontend"
     }
+  ],
+  "asarUnpack": [
+    "node_modules/**/*"
   ],
   "icon": "assets/kanban/icon.png",
   "mac": {

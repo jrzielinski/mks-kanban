@@ -20,7 +20,7 @@ export class KanbanListAgentConfigEntity {
   @Column({ name: 'default_exec_type', type: 'varchar', nullable: true })
   defaultExecType: ExecType | null;
 
-  @Column({ name: 'default_repo_id', type: 'uuid', nullable: true })
+  @Column({ name: 'default_repo_id', type: 'varchar', nullable: true })
   defaultRepoId: string | null;
 
   @Column({ name: 'default_branch', type: 'varchar', nullable: true })

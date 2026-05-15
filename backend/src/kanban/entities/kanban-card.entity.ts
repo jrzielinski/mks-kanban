@@ -1,5 +1,6 @@
 // src/kanban/entities/kanban-card.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
+import { TIMESTAMP_TYPE } from '../../database/column-types';
 
 export interface KanbanLabel {
   text: string;
@@ -69,37 +70,37 @@ export class KanbanCardEntity {
   @Column({ type: 'int', default: 0 })
   position: number;
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   labels: KanbanLabel[];
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   checklist: KanbanChecklist[];
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   checklists: KanbanChecklistGroup[];
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   attachments: KanbanAttachment[];
 
-  @Column({ name: 'member_ids', type: 'jsonb', default: '[]' })
+  @Column({ name: 'member_ids', type: 'simple-json', default: '[]' })
   memberIds: string[];
 
-  @Column({ name: 'start_date', nullable: true, type: 'timestamp' })
+  @Column({ name: 'start_date', nullable: true, type: TIMESTAMP_TYPE })
   startDate: Date | null;
 
-  @Column({ name: 'due_date', nullable: true, type: 'timestamp' })
+  @Column({ name: 'due_date', nullable: true, type: TIMESTAMP_TYPE })
   dueDate: Date | null;
 
-  @Column({ name: 'votes', type: 'jsonb', default: '[]' })
+  @Column({ name: 'votes', type: 'simple-json', default: '[]' })
   votes: string[];
 
-  @Column({ type: 'jsonb', default: '[]' })
+  @Column({ type: 'simple-json', default: '[]' })
   stickers: string[];
 
-  @Column({ name: 'custom_fields', type: 'jsonb', default: '{}' })
+  @Column({ name: 'custom_fields', type: 'simple-json', default: '{}' })
   customFields: Record<string, string | number | boolean | null>;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   recurrence: KanbanRecurrence | null;
 
   @Column({ name: 'cover_color', default: '#ffffff' })
@@ -118,15 +119,15 @@ export class KanbanCardEntity {
   tenantId: string;
 
   // #37 watch card
-  @Column({ name: 'watched_by', type: 'jsonb', default: '[]' })
+  @Column({ name: 'watched_by', type: 'simple-json', default: '[]' })
   watchedBy: string[];
 
   // #43 location
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   location: KanbanCardLocation | null;
 
   // #38 due date notification tracking
-  @Column({ name: 'last_due_notified_at', nullable: true, type: 'timestamp' })
+  @Column({ name: 'last_due_notified_at', nullable: true, type: TIMESTAMP_TYPE })
   lastDueNotifiedAt: Date | null;
 
   // Hour budget (manager sets max hours allowed)
@@ -134,11 +135,11 @@ export class KanbanCardEntity {
   maxHours: number | null;
 
   // C3: Linked cards
-  @Column({ name: 'linked_card_ids', type: 'jsonb', default: '[]' })
+  @Column({ name: 'linked_card_ids', type: 'simple-json', default: '[]' })
   linkedCardIds: string[];
 
   // C4: Blocked by (dependency blocking)
-  @Column({ name: 'blocked_by', type: 'jsonb', default: '[]' })
+  @Column({ name: 'blocked_by', type: 'simple-json', default: '[]' })
   blockedBy: string[];
 
   @CreateDateColumn({ name: 'created_at' })
