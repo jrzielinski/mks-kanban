@@ -1,26 +1,23 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import api from '@/lib/api'
+import identityApi from '@/lib/identityApi'
 import i18n from '@/lib/i18n'
 import { User, AuthStore, LoginRequest, RegisterRequest } from '@/types'
 import toast from 'react-hot-toast'
 
 export const useAuthStore = create<AuthStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       user: null,
       token: null,
       isAuthenticated: false,
 
       login: async (credentials: LoginRequest) => {
         try {
-          const response = await api.post('/auth/email/login', credentials, {
-            // @ts-ignore - custom flag
-            _skipToast: true
-          })
+          const response = await identityApi.post('/auth/email/login', credentials)
           const { token, refreshToken, user } = response.data
 
-          localStorage.setItem('token', token)
+          // token lives in zustand memory only — never persisted to localStorage
           localStorage.setItem('refreshToken', refreshToken)
 
           set({
@@ -63,7 +60,7 @@ export const useAuthStore = create<AuthStore>()(
 
       register: async (data: RegisterRequest) => {
         try {
-          await api.post('/auth/email/register', data)
+          await identityApi.post('/auth/email/register', data)
           toast.success(i18n.t('authStore.toasts.registerSuccess'))
         } catch (error: any) {
           if (error.response?.status === 422) {
@@ -82,15 +79,16 @@ export const useAuthStore = create<AuthStore>()(
       },
 
       logout: async () => {
+        const { token } = get()
         try {
-          await api.post('/auth/logout')
+          await identityApi.post('/auth/logout', {}, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          })
         } catch {
-          // Ignora erros — sessão local é limpa de qualquer forma
+          // ignore — local state is cleared regardless
         }
 
-        localStorage.removeItem('token')
         localStorage.removeItem('refreshToken')
-        localStorage.removeItem('user')
         localStorage.removeItem('analytics-session')
 
         set({
@@ -110,9 +108,13 @@ export const useAuthStore = create<AuthStore>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
-        token: state.token,
         isAuthenticated: state.isAuthenticated,
+        // token is NOT persisted — memory only (XSS mitigation)
       }),
+      onRehydrateStorage: () => (state) => {
+        // null out any stale token that may have been written by an older build
+        if (state) state.token = null
+      },
     }
   )
 )

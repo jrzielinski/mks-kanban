@@ -4,9 +4,11 @@
  * Standalone embedded build:
  *   - Forks the NestJS backend as a child Node (ELECTRON_RUN_AS_NODE=1)
  *     pointed at the active board's `.sqlite` file inside userData.
- *   - Waits for `/api/v1/health`, then logs in as the seeded admin and
- *     pushes the session to the renderer via the existing auth bridge so
- *     no login screen appears in normal desktop use.
+ *   - Waits for `/api/v1/health`, then probes the cached session:
+ *     if the access token is still valid it writes it back so the renderer
+ *     gets it via kanban:auth:get; if expired it silently refreshes against
+ *     mks-identity; if offline it leaves the session so the renderer can
+ *     enter read-only mode with a banner.
  *   - Loads `http://127.0.0.1:<port>/` — the backend serves the React app.
  *
  *   makestudio-kanban://open/...       deep-link protocol (Phase 4)
@@ -24,6 +26,7 @@ import {
   globalShortcut,
   Notification as ElectronNotification,
   dialog,
+  shell,
 } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -33,8 +36,11 @@ import { loadWindowState, saveWindowState, WindowState } from './windowState';
 import { setupUpdater } from './updater';
 import * as backend from './backendProcess';
 import * as library from './boardLibrary';
+import { startOAuthFlow } from './oauthLoopback';
 
 process.env.MAKESTUDIO_PRODUCT = process.env.MAKESTUDIO_PRODUCT || 'kanban';
+
+const IDENTITY_URL = process.env.IDENTITY_ISSUER ?? 'http://localhost:3030';
 
 // ── Phase 4: deep-link protocol ───────────────────────────────────────────
 const PROTOCOL = 'makestudio-kanban';
@@ -110,38 +116,26 @@ function handleDeepLink(url: string): void {
   }
 }
 
-// ── Backend bootstrap helpers ────────────────────────────────────────────
+// ── Auth helpers ──────────────────────────────────────────────────────────
 
-/** Ensure there is at least one board file in the library and one active. */
-function ensureActiveBoard(): library.BoardLibraryEntry {
-  const active = library.getActive();
-  if (active && fs.existsSync(active.filePath)) return active;
-  // Fall back to most recently opened…
-  const entries = library.list().filter((e) => fs.existsSync(e.filePath));
-  if (entries.length > 0) return library.setActive(entries[0].id)!;
-  // …or create a fresh "Meu Kanban" file.
-  const fresh = library.create('Meu Kanban');
-  return library.setActive(fresh.id)!;
-}
-
-/** Log in as the seeded admin against the embedded backend and push the
- *  session to the renderer via the existing auth bridge. */
-async function loginSeededAdmin(): Promise<AuthSession | null> {
-  const { email, password } = backend.getAdminCredentials();
-  const origin = backend.getOrigin();
+/** Attempt to refresh a cached session against mks-identity.
+ *  Returns the refreshed session, or null if offline / refresh invalid. */
+function tryRefreshSession(session: AuthSession): Promise<AuthSession | null> {
+  if (!session.refreshToken) return Promise.resolve(null);
   return new Promise((resolve) => {
-    const body = JSON.stringify({ email, password });
-    const url = new URL('/api/v1/auth/email/login', origin);
+    const url = new URL('/api/v1/auth/refresh', IDENTITY_URL);
     const req = http.request(
       {
         method: 'POST',
         host: url.hostname,
-        port: Number(url.port),
+        port: Number(url.port) || 80,
         path: url.pathname,
         headers: {
           'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
+          Authorization: `Bearer ${session.refreshToken}`,
+          'Content-Length': 0,
         },
+        timeout: 5_000,
       },
       (res) => {
         const chunks: Buffer[] = [];
@@ -149,15 +143,17 @@ async function loginSeededAdmin(): Promise<AuthSession | null> {
         res.on('end', () => {
           try {
             const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-            if (json?.token && json?.user) {
-              const session: AuthSession = {
+            if (json?.token) {
+              resolve({
+                ...session,
                 token: json.token,
-                refreshToken: json.refreshToken,
-                user: json.user,
-              };
-              writeSession(session);
-              resolve(session);
-            } else resolve(null);
+                refreshToken: json.refreshToken ?? session.refreshToken,
+                accessTokenExp: json.tokenExpires,
+                user: json.user ?? session.user,
+              });
+            } else {
+              resolve(null);
+            }
           } catch {
             resolve(null);
           }
@@ -165,9 +161,46 @@ async function loginSeededAdmin(): Promise<AuthSession | null> {
       },
     );
     req.on('error', () => resolve(null));
-    req.write(body);
+    req.on('timeout', () => { req.destroy(); resolve(null); });
     req.end();
   });
+}
+
+/**
+ * Ensure the renderer will have a valid (or at least non-expired) session.
+ *
+ * Behaviour:
+ *  - Token still valid (exp > now + 60s): no-op — session already in authStore.
+ *  - Token near expiry / expired + online: refresh against identity, persist result.
+ *  - Token expired + offline: leave stale session so renderer can enter read-only mode.
+ *  - No cached session: leave empty — renderer will redirect to identity login.
+ */
+async function ensureSignedIn(): Promise<void> {
+  const session = readSession();
+  if (!session) return;
+
+  const now = Math.floor(Date.now() / 1000);
+  const exp = session.accessTokenExp ?? 0;
+
+  if (exp - now > 60) return; // still fresh enough
+
+  const refreshed = await tryRefreshSession(session);
+  if (refreshed) {
+    writeSession(refreshed);
+  }
+  // Offline path: stale session stays — renderer detects expired token and shows banner
+}
+
+// ── Backend bootstrap helpers ────────────────────────────────────────────
+
+/** Ensure there is at least one board file in the library and one active. */
+function ensureActiveBoard(): library.BoardLibraryEntry {
+  const active = library.getActive();
+  if (active && fs.existsSync(active.filePath)) return active;
+  const entries = library.list().filter((e) => fs.existsSync(e.filePath));
+  if (entries.length > 0) return library.setActive(entries[0].id)!;
+  const fresh = library.create('Meu Kanban');
+  return library.setActive(fresh.id)!;
 }
 
 // ── Splash window ────────────────────────────────────────────────────────
@@ -316,7 +349,7 @@ async function createWindow(): Promise<void> {
     const active = ensureActiveBoard();
     await backend.start({ databasePath: active.filePath });
     await backend.waitForHealth();
-    await loginSeededAdmin();
+    await ensureSignedIn();
   } catch (err) {
     clearTimeout(splashTimeout);
     dismissSplash();
@@ -341,10 +374,31 @@ async function createWindow(): Promise<void> {
 
 // ── IPC handlers ──────────────────────────────────────────────────────────
 
-// Phase 1 — auth bridge
+// Auth bridge — renderer uses these to read/write/clear the encrypted session cache
 ipcMain.handle('kanban:auth:get', () => readSession());
 ipcMain.handle('kanban:auth:set', (_e, session: AuthSession) => writeSession(session));
 ipcMain.handle('kanban:auth:clear', () => clearSession());
+
+// OAuth loopback — renderer can trigger the full OAuth flow from main process
+ipcMain.handle('kanban:auth:oauth', async () => {
+  try {
+    const result = await startOAuthFlow(IDENTITY_URL, 'mks-kanban', (url) =>
+      shell.openExternal(url),
+    );
+    const session: AuthSession = {
+      token: result.accessToken,
+      refreshToken: result.refreshToken,
+      accessTokenExp: result.tokenExpires,
+      user: result.user,
+    };
+    writeSession(session);
+    return session;
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error('[product:kanban] OAuth flow failed:', err);
+    return null;
+  }
+});
 
 // Phase 3 — native OS notifications
 ipcMain.handle('kanban:notify', (_e, { title, body }: { title: string; body: string }) => {
@@ -377,18 +431,17 @@ ipcMain.handle(
   (_e, id: string, deleteFile?: boolean) => library.remove(id, deleteFile),
 );
 
-/** Open a board file: restart the embedded backend pointing at it, then
- *  re-login the renderer. Returns the fresh auth session for seedAuth. */
+/** Switch active board: restarts the embedded backend pointing at the new file.
+ *  Auth tokens are issued by mks-identity and remain valid across board switches. */
 ipcMain.handle('boardLibrary:open', async (_e, id: string) => {
   const entry = library.setActive(id);
   if (!entry) throw new Error(`board ${id} not in library`);
   await backend.switchTo(entry.filePath);
-  const session = await loginSeededAdmin();
-  // Tell the renderer to reload at /kanban so it sees the new file.
+  // Reload renderer so it picks up the new SQLite context
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.loadURL(`${backend.getOrigin()}/kanban`).catch(() => {});
   }
-  return { entry, session };
+  return { entry };
 });
 
 ipcMain.handle('boardLibrary:import', async () => {

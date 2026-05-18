@@ -5,6 +5,8 @@ import * as fs from 'fs';
 export interface AuthSession {
   token: string;
   refreshToken?: string;
+  /** Unix timestamp (seconds) when the access token expires. */
+  accessTokenExp?: number;
   user: {
     id?: string | number;
     email?: string;

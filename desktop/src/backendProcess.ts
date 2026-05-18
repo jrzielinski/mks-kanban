@@ -19,19 +19,19 @@ import { createServer } from 'net';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
-import { loadOrCreateSecret } from './desktopSecret';
 
 let child: ChildProcess | null = null;
 let port: number | null = null;
 let currentDbPath: string | null = null;
 
-const secret = (() => loadOrCreateSecret())();
+const IDENTITY_ISSUER =
+  process.env.IDENTITY_ISSUER ?? 'http://localhost:3030';
+const IDENTITY_JWKS_URI =
+  process.env.IDENTITY_JWKS_URI ?? `${IDENTITY_ISSUER}/.well-known/jwks.json`;
 
 function resolveBackendEntry(): string {
-  // Packaged: extraResources/app-backend/dist/main.js (see electron-builder.json)
   const packaged = path.join(process.resourcesPath, 'app-backend', 'dist', 'main.js');
   if (fs.existsSync(packaged)) return packaged;
-  // Dev: repo's backend/dist/main.js (run `npm run build:backend` first)
   const dev = path.join(__dirname, '..', '..', 'backend', 'dist', 'main.js');
   if (fs.existsSync(dev)) return dev;
   throw new Error(
@@ -87,9 +87,9 @@ export async function start({ databasePath }: StartOptions): Promise<void> {
       PORT: String(port),
       DB_DRIVER: 'sqlite',
       DATABASE_PATH: databasePath,
-      JWT_SECRET: secret.jwtSecret,
-      SEED_ADMIN_EMAIL: secret.adminEmail,
-      SEED_ADMIN_PASSWORD: secret.adminPassword,
+      IDENTITY_ISSUER,
+      IDENTITY_JWKS_URI,
+      IDENTITY_AUDIENCE: process.env.IDENTITY_AUDIENCE ?? 'mks-kanban',
       ...(frontendDist ? { FRONTEND_DIST: frontendDist } : {}),
     },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
@@ -129,9 +129,7 @@ function fetchHealth(): Promise<void> {
       },
     );
     req.on('error', reject);
-    req.on('timeout', () => {
-      req.destroy(new Error('timeout'));
-    });
+    req.on('timeout', () => req.destroy(new Error('timeout')));
   });
 }
 
@@ -146,11 +144,7 @@ export async function stop(): Promise<void> {
   dying.kill('SIGTERM');
   await new Promise<void>((resolve) => {
     const t = setTimeout(() => {
-      try {
-        dying.kill('SIGKILL');
-      } catch {
-        /* already gone */
-      }
+      try { dying.kill('SIGKILL'); } catch { /* already gone */ }
       resolve();
     }, 3000);
     dying.once('exit', () => {
@@ -172,8 +166,4 @@ export function getOrigin(): string {
 
 export function getActivePath(): string | null {
   return currentDbPath;
-}
-
-export function getAdminCredentials(): { email: string; password: string } {
-  return { email: secret.adminEmail, password: secret.adminPassword };
 }
