@@ -16,6 +16,7 @@
 import { app } from 'electron';
 import { fork, ChildProcess } from 'child_process';
 import { createServer } from 'net';
+import { randomBytes } from 'crypto';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
@@ -23,6 +24,7 @@ import * as http from 'http';
 let child: ChildProcess | null = null;
 let port: number | null = null;
 let currentDbPath: string | null = null;
+let __bootstrapToken: string | null = null;
 
 const IDENTITY_ISSUER =
   process.env.IDENTITY_ISSUER ?? 'http://localhost:3030';
@@ -67,19 +69,25 @@ function pickFreePort(): Promise<number> {
 
 export interface StartOptions {
   databasePath: string;
+  port?: number;
 }
 
-export async function start({ databasePath }: StartOptions): Promise<void> {
+export async function start({ databasePath, port: fixedPort }: StartOptions): Promise<void> {
   if (child) await stop();
 
   const entry = resolveBackendEntry();
+  const backendRoot = path.resolve(path.dirname(entry), '..');
   const frontendDist = resolveFrontendDist();
-  port = await pickFreePort();
+  port = fixedPort ?? await pickFreePort();
   currentDbPath = databasePath;
 
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 
+  const localSecret = randomBytes(32).toString('hex');
+  __bootstrapToken = randomBytes(16).toString('hex');
+
   child = fork(entry, [], {
+    cwd: backendRoot,
     env: {
       ...process.env,
       ELECTRON_RUN_AS_NODE: '1',
@@ -87,6 +95,8 @@ export async function start({ databasePath }: StartOptions): Promise<void> {
       PORT: String(port),
       DB_DRIVER: 'sqlite',
       DATABASE_PATH: databasePath,
+      LOCAL_JWT_SECRET: localSecret,
+      LOCAL_BOOTSTRAP_TOKEN: __bootstrapToken,
       IDENTITY_ISSUER,
       IDENTITY_JWKS_URI,
       IDENTITY_AUDIENCE: process.env.IDENTITY_AUDIENCE ?? 'mks-kanban',
@@ -155,8 +165,13 @@ export async function stop(): Promise<void> {
 }
 
 export async function switchTo(databasePath: string): Promise<void> {
-  await start({ databasePath });
+  const reusePort = port; // preserve port so renderer stays alive
+  await start({ databasePath, port: reusePort ?? undefined });
   await waitForHealth();
+}
+
+export function getPort(): number | null {
+  return port;
 }
 
 export function getOrigin(): string {
@@ -166,4 +181,8 @@ export function getOrigin(): string {
 
 export function getActivePath(): string | null {
   return currentDbPath;
+}
+
+export function getBootstrapToken(): string | null {
+  return __bootstrapToken;
 }

@@ -43,7 +43,7 @@ export function useElectronAuthSync(): { hydrated: boolean } {
         const session: AuthSession = {
           token: state.token!,
           refreshToken: localStorage.getItem('refreshToken') ?? undefined,
-          user: state.user as AuthSession['user'],
+          user: state.user as unknown as AuthSession['user'],
         };
         window.kanbanDesktop.setAuthSession(session).catch(console.error);
       } else if (!state.isAuthenticated && prev.isAuthenticated) {

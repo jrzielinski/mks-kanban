@@ -31,16 +31,44 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
-import { readSession, writeSession, clearSession, AuthSession } from './authStore';
+import { AuthSession } from './authStore';
 import { loadWindowState, saveWindowState, WindowState } from './windowState';
 import { setupUpdater } from './updater';
 import * as backend from './backendProcess';
+import * as agent from './agentProcess';
 import * as library from './boardLibrary';
+import * as license from './licenseStore';
 import { startOAuthFlow } from './oauthLoopback';
+
+// ── Load .env from desktop root ──────────────────────────────────────────
+try {
+  const envPath = path.join(__dirname, '..', '.env');
+  const envRaw = fs.readFileSync(envPath, 'utf-8');
+  for (const line of envRaw.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim();
+    if (key) process.env[key] = val;
+  }
+} catch { /* .env file is optional */ }
 
 process.env.MAKESTUDIO_PRODUCT = process.env.MAKESTUDIO_PRODUCT || 'kanban';
 
+process.on('uncaughtException', (error) => {
+  console.error('[product:kanban] UNCAUGHT EXCEPTION:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[product:kanban] UNHANDLED REJECTION:', reason);
+});
+
 const IDENTITY_URL = process.env.IDENTITY_ISSUER ?? 'http://localhost:3030';
+
+// In-memory auth session — no file persistence
+let currentAuthSession: AuthSession | null = null;
 
 // ── Phase 4: deep-link protocol ───────────────────────────────────────────
 const PROTOCOL = 'makestudio-kanban';
@@ -73,6 +101,7 @@ app.on('open-url', (_event, url) => {
 });
 
 let mainWindow: BrowserWindow | null = null;
+let agentWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let isQuitting = false;
 let unmaximizedBounds: WindowState = { width: 1440, height: 960, maximized: false };
@@ -118,77 +147,63 @@ function handleDeepLink(url: string): void {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────
 
-/** Attempt to refresh a cached session against mks-identity.
- *  Returns the refreshed session, or null if offline / refresh invalid. */
-function tryRefreshSession(session: AuthSession): Promise<AuthSession | null> {
-  if (!session.refreshToken) return Promise.resolve(null);
-  return new Promise((resolve) => {
-    const url = new URL('/api/v1/auth/refresh', IDENTITY_URL);
-    const req = http.request(
-      {
-        method: 'POST',
-        host: url.hostname,
-        port: Number(url.port) || 80,
-        path: url.pathname,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.refreshToken}`,
-          'Content-Length': 0,
+/** Authenticate locally using the bootstrap token.
+ *  The embedded backend generates a one-time bootstrap token on each start.
+ *  POST it to /auth/local-login, get a 24h JWT back, store in memory. */
+
+async function ensureLocalSignedIn(bootstrapToken: string): Promise<void> {
+  try {
+    const origin = backend.getOrigin();
+    const url = new URL('/api/v1/auth/email/login', origin);
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@zielinski.dev.br';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'password@123';
+    const body = JSON.stringify({ email: adminEmail, password: adminPassword });
+
+    const result = await new Promise<AuthSession | null>((resolve) => {
+      const req = http.request(
+        {
+          method: 'POST',
+          host: url.hostname,
+          port: Number(url.port) || 80,
+          path: url.pathname,
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(body),
+          },
+          timeout: 5_000,
         },
-        timeout: 5_000,
-      },
-      (res) => {
-        const chunks: Buffer[] = [];
-        res.on('data', (c) => chunks.push(c));
-        res.on('end', () => {
-          try {
-            const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
-            if (json?.token) {
-              resolve({
-                ...session,
-                token: json.token,
-                refreshToken: json.refreshToken ?? session.refreshToken,
-                accessTokenExp: json.tokenExpires,
-                user: json.user ?? session.user,
-              });
-            } else {
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (c) => chunks.push(c));
+          res.on('end', () => {
+            try {
+              const json = JSON.parse(Buffer.concat(chunks).toString('utf-8'));
+              if (json?.token) {
+                resolve({
+                  token: json.token,
+                  refreshToken: '',
+                  accessTokenExp: json.expiresAt,
+                  user: json.user,
+                });
+              } else {
+                resolve(null);
+              }
+            } catch {
               resolve(null);
             }
-          } catch {
-            resolve(null);
-          }
-        });
-      },
-    );
-    req.on('error', () => resolve(null));
-    req.on('timeout', () => { req.destroy(); resolve(null); });
-    req.end();
-  });
-}
+          });
+        },
+      );
+      req.on('error', () => resolve(null));
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.write(body);
+      req.end();
+    });
 
-/**
- * Ensure the renderer will have a valid (or at least non-expired) session.
- *
- * Behaviour:
- *  - Token still valid (exp > now + 60s): no-op — session already in authStore.
- *  - Token near expiry / expired + online: refresh against identity, persist result.
- *  - Token expired + offline: leave stale session so renderer can enter read-only mode.
- *  - No cached session: leave empty — renderer will redirect to identity login.
- */
-async function ensureSignedIn(): Promise<void> {
-  const session = readSession();
-  if (!session) return;
-
-  const now = Math.floor(Date.now() / 1000);
-  const exp = session.accessTokenExp ?? 0;
-
-  if (exp - now > 60) return; // still fresh enough
-
-  const refreshed = await tryRefreshSession(session);
-  if (refreshed) {
-    writeSession(refreshed);
+    if (result) currentAuthSession = result;
+  } catch {
+    // Leave stale session — renderer enters read-only mode
   }
-  // Offline path: stale session stays — renderer detects expired token and shows banner
 }
 
 // ── Backend bootstrap helpers ────────────────────────────────────────────
@@ -347,9 +362,20 @@ async function createWindow(): Promise<void> {
   // ── Boot embedded backend pointing at the active board file ────────────
   try {
     const active = ensureActiveBoard();
-    await backend.start({ databasePath: active.filePath });
+    await Promise.all([
+      backend.start({ databasePath: active.filePath }),
+      agent.start().catch((err) =>
+        // eslint-disable-next-line no-console
+        console.warn('[product:kanban] agent not available:', err.message),
+      ),
+    ]);
     await backend.waitForHealth();
-    await ensureSignedIn();
+
+    // Offline/local mode — auth against the embedded backend instead of remote identity
+    const bootstrapToken = backend.getBootstrapToken();
+    if (bootstrapToken) {
+      await ensureLocalSignedIn(bootstrapToken);
+    }
   } catch (err) {
     clearTimeout(splashTimeout);
     dismissSplash();
@@ -374,10 +400,32 @@ async function createWindow(): Promise<void> {
 
 // ── IPC handlers ──────────────────────────────────────────────────────────
 
-// Auth bridge — renderer uses these to read/write/clear the encrypted session cache
-ipcMain.handle('kanban:auth:get', () => readSession());
-ipcMain.handle('kanban:auth:set', (_e, session: AuthSession) => writeSession(session));
-ipcMain.handle('kanban:auth:clear', () => clearSession());
+// Auth bridge — renderer uses these to read/write/clear the in-memory session
+ipcMain.handle('kanban:auth:get', () => currentAuthSession);
+ipcMain.handle('kanban:auth:set', (_e, session: AuthSession) => { currentAuthSession = session; });
+ipcMain.handle('kanban:auth:clear', () => { currentAuthSession = null; });
+// Expose .env credentials to the renderer (auto-fill login form)
+ipcMain.handle('kanban:auth:get-env-creds', () => ({
+  email: process.env.ADMIN_EMAIL || 'admin@zielinski.dev.br',
+  password: process.env.ADMIN_PASSWORD || 'password@123',
+}));
+
+// Local login — renderer delegates credential POST to local backend (correct port)
+ipcMain.handle('kanban:auth:login', async (_e, credentials: { email: string; password: string }) => {
+  const origin = backend.getOrigin();
+  const response = await fetch(`${origin}/api/v1/auth/email/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(credentials),
+  });
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`Login failed: ${response.status} ${errBody}`);
+  }
+  const session = (await response.json()) as AuthSession;
+  currentAuthSession = session;
+  return session;
+});
 
 // OAuth loopback — renderer can trigger the full OAuth flow from main process
 ipcMain.handle('kanban:auth:oauth', async () => {
@@ -391,7 +439,7 @@ ipcMain.handle('kanban:auth:oauth', async () => {
       accessTokenExp: result.tokenExpires,
       user: result.user,
     };
-    writeSession(session);
+    currentAuthSession = session;
     return session;
   } catch (err) {
     // eslint-disable-next-line no-console
@@ -419,6 +467,36 @@ ipcMain.handle('kanban:badge', (_e, count: number) => {
   }
 });
 
+// ── Agent IPC handlers ──────────────────────────────────────────────────
+ipcMain.handle('agent:send', (_e, input: string) => {
+  return new Promise<string>((resolve, reject) => {
+    const id = `agent_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const t = setTimeout(() => reject(new Error('agent response timeout')), 60_000);
+    agent.onMessage((msg) => {
+      if ((msg as { id: string }).id === id) {
+        clearTimeout(t);
+        resolve((msg as { text: string }).text);
+      }
+    });
+    try {
+      agent.send({ type: 'prompt', id, text: input });
+    } catch (err) {
+      clearTimeout(t);
+      reject(err);
+    }
+  });
+});
+ipcMain.handle('agent:restart', () => agent.restart());
+ipcMain.handle('agent:isRunning', () => agent.isRunning());
+ipcMain.handle('agent:toggle-standalone', () => {
+  if (agentWindow && !agentWindow.isDestroyed()) {
+    agentWindow.close();
+    return false;
+  }
+  createAgentWindow();
+  return true;
+});
+
 // Board library — file-per-board model
 ipcMain.handle('boardLibrary:list', () => library.list());
 ipcMain.handle('boardLibrary:active', () => library.getActive());
@@ -437,9 +515,8 @@ ipcMain.handle('boardLibrary:open', async (_e, id: string) => {
   const entry = library.setActive(id);
   if (!entry) throw new Error(`board ${id} not in library`);
   await backend.switchTo(entry.filePath);
-  // Reload renderer so it picks up the new SQLite context
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.loadURL(`${backend.getOrigin()}/kanban`).catch(() => {});
+    mainWindow.webContents.reload();
   }
   return { entry };
 });
@@ -455,12 +532,66 @@ ipcMain.handle('boardLibrary:import', async () => {
   return library.importFile(res.filePaths[0]);
 });
 
+// ── License IPC handlers ────────────────────────────────────────────────
+ipcMain.handle('license:getState', () => license.getLicenseState());
+ipcMain.handle('license:install', (_e, jwt: string) => license.installLicense(jwt));
+ipcMain.handle('license:clear', () => { license.clearLicense(); return true; });
+ipcMain.handle('license:getMachineId', () => license.getMachineId());
+ipcMain.handle('license:refresh', () => license.refreshLicenseState());
+
+// ── Standalone Agent Window ─────────────────────────────────────────────
+function createAgentWindow() {
+  if (agentWindow && !agentWindow.isDestroyed()) {
+    agentWindow.focus();
+    return;
+  }
+
+  const template = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"/>
+<title>MKS-CODE Terminal</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#0d1117;color:#c9d1d9;font-family:'Cascadia Code','Fira Code','JetBrains Mono',monospace;font-size:14px;line-height:1.5}
+#t{overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+#f{position:fixed;bottom:0;left:0;right:0;display:flex;background:#161b22;border-top:1px solid #30363d}
+#i{flex:1;background:transparent;border:none;color:#c9d1d9;font:inherit;padding:12px 16px;outline:none}
+.prompt{color:#58a6ff}.output{color:#7ee787}.error{color:#f85149}.info{color:#8b949e}
+</style></head>
+<body><div id="t"><span class="info">MKS-CODE Terminal</span></div>
+<div id="f"><input id="i" placeholder="> type a command…" autofocus/></div>
+<script>
+const{ipcRenderer}=require('electron'),t=document.getElementById('t'),i=document.getElementById('i');
+ipcRenderer.on('agent:output',(_,d)=>{const e=document.createElement('div');
+if(d.type==='error')e.className='error';else if(d.type==='prompt')e.className='prompt';else e.className='output';
+e.textContent=d.text;t.appendChild(e);t.scrollTop=t.scrollHeight});
+i.addEventListener('keydown',e=>{if(e.key==='Enter'&&i.value.trim()){const s='> '+i.value.trim();
+const l=document.createElement('div');l.className='prompt';l.textContent=s;t.appendChild(l);
+ipcRenderer.invoke('agent:send',i.value.trim());i.value=''}
+if(e.key==='c'&&(e.ctrlKey||e.metaKey)){ipcRenderer.send('agent:cancel');
+const d=document.createElement('div');d.className='info';d.textContent='^C';t.appendChild(d)}});
+</script></body></html>`;
+
+  agentWindow = new BrowserWindow({
+    width: 900, height: 700, minWidth: 600, minHeight: 400,
+    title: 'MKS-CODE Terminal', autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: true,
+    },
+  });
+  agentWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(template)}`);
+  agentWindow.on('closed', () => { agentWindow = null; });
+}
+
 // ── App lifecycle ─────────────────────────────────────────────────────────
 app.setName('MakeStudio Kanban');
 
 app.on('before-quit', async () => {
   isQuitting = true;
-  await backend.stop();
+  await Promise.all([backend.stop(), agent.stop()]);
 });
 
 app.whenReady().then(async () => {
@@ -479,6 +610,14 @@ app.whenReady().then(async () => {
     console.warn('[product:kanban] CommandOrControl+Shift+K already in use by another app');
   }
 
+  const agentShortcut = globalShortcut.register('CommandOrControl+Shift+T', () => {
+    createAgentWindow();
+  });
+  if (!agentShortcut) {
+    // eslint-disable-next-line no-console
+    console.warn('[product:kanban] CommandOrControl+Shift+T already in use by another app');
+  }
+
   app.on('activate', () => {
     if (!mainWindow || mainWindow.isDestroyed()) void createWindow();
     else {
@@ -490,6 +629,9 @@ app.whenReady().then(async () => {
   if (process.env.NODE_ENV !== 'development' && mainWindow) {
     setupUpdater(mainWindow);
   }
+}).catch((error) => {
+  console.error('[product:kanban] Failed to initialize app:', error);
+  app.quit();
 });
 
 app.on('window-all-closed', () => {

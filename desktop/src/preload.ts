@@ -14,6 +14,8 @@ contextBridge.exposeInMainWorld('kanbanDesktop', {
   setAuthSession: (session: unknown): Promise<void> =>
     ipcRenderer.invoke('kanban:auth:set', session),
   clearAuthSession: (): Promise<void> => ipcRenderer.invoke('kanban:auth:clear'),
+  login: (credentials: { email: string; password: string }): Promise<unknown> =>
+    ipcRenderer.invoke('kanban:auth:login', credentials),
   platform: process.platform,
 
   // ── Phase 3 — native notifications ──────────────────────────────────────
@@ -38,6 +40,26 @@ contextBridge.exposeInMainWorld('kanbanDesktop', {
   },
   installUpdate: (): Promise<void> => ipcRenderer.invoke('kanban:update:install'),
 
+  // ── Phase 6 — embedded MKS-CODE agent ──────────────────────────────────
+  /** Send a prompt/command to the CLI agent (returns response ID). */
+  agent: {
+    send: (input: string): Promise<string> =>
+      ipcRenderer.invoke('agent:send', input),
+    onResponse: (cb: (data: { id: string; text: string }) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, data: { id: string; text: string }) =>
+        cb(data);
+      ipcRenderer.on('agent:response', handler);
+      return () => ipcRenderer.removeListener('agent:response', handler);
+    },
+    onError: (cb: (err: string) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, err: string) => cb(err);
+      ipcRenderer.on('agent:error', handler);
+      return () => ipcRenderer.removeListener('agent:error', handler);
+    },
+    restart: (): Promise<void> => ipcRenderer.invoke('agent:restart'),
+    isRunning: (): Promise<boolean> => ipcRenderer.invoke('agent:isRunning'),
+  },
+
   // ── Board library — file-per-board model ────────────────────────────────
   // Each board is a standalone .sqlite file. Switching boards restarts the
   // embedded backend pointed at the new file and returns a fresh session.
@@ -55,5 +77,16 @@ contextBridge.exposeInMainWorld('kanbanDesktop', {
       ipcRenderer.invoke('boardLibrary:open', id),
     import: (): Promise<BoardLibraryEntry | null> =>
       ipcRenderer.invoke('boardLibrary:import'),
+  },
+
+  license: {
+    getState: (): Promise<import('./licenseStore').LicenseState> =>
+      ipcRenderer.invoke('license:getState'),
+    install: (jwt: string): Promise<import('./licenseStore').LicenseState> =>
+      ipcRenderer.invoke('license:install', jwt),
+    clear: (): Promise<boolean> => ipcRenderer.invoke('license:clear'),
+    getMachineId: (): Promise<string> => ipcRenderer.invoke('license:getMachineId'),
+    refresh: (): Promise<import('./licenseStore').LicenseState> =>
+      ipcRenderer.invoke('license:refresh'),
   },
 });

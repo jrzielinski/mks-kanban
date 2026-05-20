@@ -29,6 +29,10 @@ echo "[pack-kanban] Rebuilding backend native modules for Electron $ELECTRON_VER
 # uses a different ABI, so it must be rebuilt before packaging.
 npx --yes @electron/rebuild --module-dir "$BACKEND_DIR" --version "$ELECTRON_VERSION"
 
+echo "[pack-kanban] Building MKS-CODE agent..."
+cd "$ROOT_DIR/../gptapi/agent"
+npm run build
+
 echo "[pack-kanban] Compiling Electron main process..."
 cd "$DESKTOP_DIR"
 npx tsc -p tsconfig.json

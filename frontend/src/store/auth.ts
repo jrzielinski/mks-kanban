@@ -4,6 +4,7 @@ import identityApi from '@/lib/identityApi'
 import i18n from '@/lib/i18n'
 import { User, AuthStore, LoginRequest, RegisterRequest } from '@/types'
 import toast from 'react-hot-toast'
+import api from '@/lib/api'
 
 export const useAuthStore = create<AuthStore>()(
   persist(
@@ -14,6 +15,17 @@ export const useAuthStore = create<AuthStore>()(
 
       login: async (credentials: LoginRequest) => {
         try {
+          // Desktop mode: use IPC bridge to reach local backend on correct port
+          const desktop = (window as any).kanbanDesktop
+          if (desktop?.login) {
+            const result = await desktop.login(credentials)
+            const { token, refreshToken, user } = result
+            localStorage.setItem('token', token)
+            if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
+            set({ token, user, isAuthenticated: true })
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+            return result
+          }
           const response = await identityApi.post('/auth/email/login', credentials)
           const { token, refreshToken, user } = response.data
 

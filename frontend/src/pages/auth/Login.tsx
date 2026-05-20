@@ -121,6 +121,23 @@ export const Login: React.FC = () => {
     }
   }
 
+  // Auto-fill from Electron .env if available
+  useEffect(() => {
+    const loadEnvCreds = async () => {
+      try {
+        const w = window as any;
+        if (w.kanbanDesktop?.getEnvCreds) {
+          const creds = await w.kanbanDesktop.getEnvCreds();
+          if (creds?.email && creds?.password) {
+            setValue('email', creds.email);
+            setValue('password', creds.password);
+          }
+        }
+      } catch {};
+    };
+    loadEnvCreds();
+  }, [setValue]);
+
   const fillDevCredentials = () => {
     setValue('email', 'admin@zielinski.dev.br')
     setValue('password', 'password@123')

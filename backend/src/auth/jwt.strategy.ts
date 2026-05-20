@@ -1,51 +1,50 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { passportJwtSecret } from 'jwks-rsa';
-import { ConfigService } from '@nestjs/config';
+
+// Lazy require to avoid CJS crash under ELECTRON_RUN_AS_NODE
+function getPassportJwtSecret(): any {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('jwks-rsa').passportJwtSecret;
+}
 
 export interface JwtPayload {
   sub: string;
-  sessionId: string;
+  email?: string;
   tenantId: string;
-  email: string;
-  name: string | null;
-  role: string;
+  name?: string;
+  role?: string;
 }
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(cfg: ConfigService) {
-    const jwksUri =
-      cfg.get<string>('IDENTITY_JWKS_URI') ??
-      `${cfg.get<string>('IDENTITY_ISSUER') ?? 'http://localhost:3030'}/.well-known/jwks.json`;
+  constructor() {
+    const localSecret = process.env.LOCAL_JWT_SECRET;
 
-    super({
+    const options: any = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      algorithms: ['RS256'],
-      issuer: cfg.get<string>('IDENTITY_ISSUER'),
-      audience: cfg.get<string>('IDENTITY_AUDIENCE') ?? 'mks-kanban',
-      secretOrKeyProvider: passportJwtSecret({
-        jwksUri,
+    };
+
+    if (localSecret) {
+      // Offline mode: symmetric HS256 (no JWKS dependency)
+      options.secretOrKey = Buffer.from(localSecret, 'hex');
+      options.algorithms = ['HS256'];
+    } else {
+      // Online mode: remote JWKS (RS256)
+      options.secretOrKey = getPassportJwtSecret()({
+        jwksUri: process.env.IDENTITY_JWKS_URI ?? 'https://identity.makestudio.dev/.well-known/jwks.json',
         cache: true,
-        cacheMaxEntries: 10,
-        cacheMaxAge: 10 * 60 * 1000, // 10 min
         rateLimit: true,
-        jwksRequestsPerMinute: 10,
-      }),
-    });
+      });
+      options.issuer = process.env.IDENTITY_ISSUER ?? 'https://identity.makestudio.dev';
+      options.algorithms = ['RS256'];
+    }
+
+    super(options);
   }
 
-  async validate(payload: any): Promise<JwtPayload> {
-    if (!payload.sub) throw new UnauthorizedException();
-    return {
-      sub: payload.sub,
-      sessionId: payload.sessionId ?? '',
-      tenantId: payload.tenantId ?? 'staff',
-      email: payload.email ?? '',
-      name: payload.name ?? null,
-      role: payload.role ?? 'user',
-    };
+  async validate(payload: JwtPayload) {
+    return payload;
   }
 }

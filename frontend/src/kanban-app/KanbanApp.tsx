@@ -8,6 +8,7 @@ import { useKanbanNotifications } from './useKanbanNotifications';
 import { useDeepLink } from './useDeepLink';
 import { UpdateBanner } from './UpdateBanner';
 import { ConnectionBadge } from './ConnectionBadge';
+import { AgentTerminal } from './AgentTerminal';
 
 const Login = lazy(() =>
   import('@/pages/auth/Login').then((m) => ({ default: (m as any).Login ?? (m as any).default })),
@@ -74,6 +75,7 @@ export const KanbanApp: React.FC = () => {
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>
       </Suspense>
+      <AgentTerminal />
     </>
   );
 };
