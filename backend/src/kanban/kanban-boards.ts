@@ -26,6 +26,20 @@ import { MultiProviderAiService } from '../api-config/services/multi-provider-ai
 import { ApiConfigService } from '../api-config/api-config.service';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 
+/**
+ * Build the MakeStudio Bot member entry for this tenant. The id is
+ * stable + per-tenant so the bot shows up consistently in audit
+ * trails across boards, never collides between tenants, and matches
+ * what `agent/src/repl/kanban-bot.ts` (the CLI side) emits.
+ */
+function buildMakeStudioBotMember(tenantId: string): KanbanBoardMember {
+  return {
+    id: `makestudio-bot:${tenantId}`,
+    name: 'MakeStudio Bot',
+    avatarColor: '#22D3EE', // cyan — brand
+  };
+}
+
 export async function listBoards_helper(service: KanbanService, tenantId: string, userId?: string): Promise<(KanbanBoardEntity & { isStarred: boolean })[]> {
   const boards = await (service as any).boardRepo.find({
     where: { tenantId, isArchived: false, isTemplate: false },
@@ -43,9 +57,15 @@ export async function listTemplates_helper(service: KanbanService, tenantId: str
 
 // @ts-ignore
 export async function createBoard_helper(service: KanbanService, tenantId: string, ownerId: string, dto: CreateBoardDto): Promise<KanbanBoardEntity & { isStarred: boolean }> {
+  // Every new board ships with the MakeStudio Bot already in members[].
+  // The bot is per-tenant — same id across every board of this tenant.
+  // No-op for the agent if no card opts the bot in (memberIds doesn't
+  // include the bot AND `--explicit-only` is set), so it's safe to be
+  // present by default.
+  const bot = buildMakeStudioBotMember(tenantId);
   const initialMembers: KanbanBoardMember[] = ownerId
-    ? [{ id: ownerId, name: 'Você', avatarColor: '#579dff' }]
-    : [];
+    ? [{ id: ownerId, name: 'Você', avatarColor: '#579dff' }, bot]
+    : [bot];
   // If creating from template, duplicate it
   if (dto.templateId) {
     const tmpl = await (service as any).boardRepo.findOne({ where: { id: dto.templateId, tenantId, isTemplate: true } });
@@ -122,6 +142,19 @@ export async function updateBoard_helper(service: KanbanService, tenantId: strin
   }
   if (dto.members !== undefined) {
     board.members = (dto.members || []).filter((member) => !!member?.id && !!member?.name);
+    // MakeStudio Bot is system-managed and must remain present on every
+    // board. Even if a client (UI bug, curl, integration mistake) PATCHes
+    // members[] without the bot, we re-inject it here so the agent CLI
+    // never finds itself locked out. Idempotent: if the bot is already
+    // in the incoming members list, nothing extra is added.
+    const expectedBotId = `makestudio-bot:${tenantId}`;
+    if (!board.members.some((m) => m.id === expectedBotId)) {
+      board.members.push({
+        id: expectedBotId,
+        name: 'MakeStudio Bot',
+        avatarColor: '#22D3EE',
+      });
+    }
     const validMemberIds = new Set(board.members.map((member) => member.id));
     const cards = await (service as any).cardRepo.find({ where: { boardId: board.id, tenantId } });
     if (cards.length > 0) {
