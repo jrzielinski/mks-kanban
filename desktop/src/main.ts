@@ -36,9 +36,19 @@ import { loadWindowState, saveWindowState, WindowState } from './windowState';
 import { setupUpdater } from './updater';
 import * as backend from './backendProcess';
 import * as agent from './agentProcess';
+import * as agentPty from './agentPty';
 import * as library from './boardLibrary';
 import * as license from './licenseStore';
 import { startOAuthFlow } from './oauthLoopback';
+import { initLogger, getLogFilePath } from './logger';
+
+// ── Persistent file logging ───────────────────────────────────────────────
+// Tee stdout/stderr (main + forked backend/agent + renderer messages + crashes)
+// to a file on disk so failures are recoverable even with no terminal attached.
+app.setName('MakeStudio Kanban');
+initLogger();
+// eslint-disable-next-line no-console
+console.log(`[product:kanban] log file: ${getLogFilePath()}`);
 
 // ── Load .env from desktop root ──────────────────────────────────────────
 try {
@@ -130,6 +140,11 @@ small{color:#94a3b8;font-size:12px;margin-bottom:20px}
 
 function getIconPath(): string {
   return path.join(__dirname, '..', 'assets', 'kanban', 'icon.png');
+}
+
+/** macOS menu-bar template glyph (monochrome, ~18px, auto light/dark). */
+function getTrayIconPath(): string {
+  return path.join(__dirname, '..', 'assets', 'kanban', 'trayTemplate.png');
 }
 
 function handleDeepLink(url: string): void {
@@ -239,10 +254,16 @@ function createSplash(): BrowserWindow {
 // ── System tray ──────────────────────────────────────────────────────────
 
 function createTray(): void {
-  const iconPath = getIconPath();
+  const iconPath = getTrayIconPath();
   const icon = fs.existsSync(iconPath)
     ? nativeImage.createFromPath(iconPath)
     : nativeImage.createEmpty();
+
+  // macOS standard: a template image renders at the correct menu-bar size and
+  // auto-inverts for light/dark. Electron picks up trayTemplate@2x.png on Retina.
+  if (process.platform === 'darwin' && !icon.isEmpty()) {
+    icon.setTemplateImage(true);
+  }
 
   tray = new Tray(icon);
   tray.setToolTip('MakeStudio Kanban');
@@ -362,13 +383,9 @@ async function createWindow(): Promise<void> {
   // ── Boot embedded backend pointing at the active board file ────────────
   try {
     const active = ensureActiveBoard();
-    await Promise.all([
-      backend.start({ databasePath: active.filePath }),
-      agent.start().catch((err) =>
-        // eslint-disable-next-line no-console
-        console.warn('[product:kanban] agent not available:', err.message),
-      ),
-    ]);
+    // The MakeStudio Code agent is no longer pre-forked here — each terminal
+    // view spawns its own TUI session on demand via agentPty (node-pty).
+    await backend.start({ databasePath: active.filePath });
     await backend.waitForHealth();
 
     // Offline/local mode — auth against the embedded backend instead of remote identity
@@ -383,7 +400,8 @@ async function createWindow(): Promise<void> {
     console.error('[product:kanban] backend failed to start:', err);
     dialog.showErrorBox(
       'Falha ao iniciar',
-      `Não foi possível iniciar o backend embutido.\n\n${(err as Error).message}`,
+      `Não foi possível iniciar o backend embutido.\n\n${(err as Error).message}\n\n` +
+        `Log completo em:\n${getLogFilePath()}`,
     );
     app.quit();
     return;
@@ -496,6 +514,21 @@ ipcMain.handle('agent:toggle-standalone', () => {
   createAgentWindow();
   return true;
 });
+// Open (or focus) the standalone MakeStudio Code window.
+ipcMain.handle('agent:open-window', () => {
+  createAgentWindow();
+  return true;
+});
+
+// ── MakeStudio Code TUI over a pseudo-terminal (node-pty) ────────────────
+ipcMain.handle('agent:pty:start', (e, opts: { cols?: number; rows?: number } = {}) =>
+  agentPty.start(e.sender, opts),
+);
+ipcMain.on('agent:pty:write', (_e, id: string, data: string) => agentPty.write(id, data));
+ipcMain.on('agent:pty:resize', (_e, id: string, cols: number, rows: number) =>
+  agentPty.resize(id, cols, rows),
+);
+ipcMain.on('agent:pty:kill', (_e, id: string) => agentPty.kill(id));
 
 // Board library — file-per-board model
 ipcMain.handle('boardLibrary:list', () => library.list());
@@ -539,58 +572,55 @@ ipcMain.handle('license:clear', () => { license.clearLicense(); return true; });
 ipcMain.handle('license:getMachineId', () => license.getMachineId());
 ipcMain.handle('license:refresh', () => license.refreshLicenseState());
 
-// ── Standalone Agent Window ─────────────────────────────────────────────
-function createAgentWindow() {
+// ── Standalone Agent Window (MakeStudio Code) ───────────────────────────
+// Loads the same React app at ?view=agent — which renders a full-window agent
+// terminal — using the same secure preload bridge as the main window, so
+// window.kanbanDesktop.agent works exactly as it does in the embedded panel.
+function createAgentWindow(): void {
   if (agentWindow && !agentWindow.isDestroyed()) {
+    if (!agentWindow.isVisible()) agentWindow.show();
     agentWindow.focus();
     return;
   }
 
-  const template = `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"/>
-<title>MKS-CODE Terminal</title>
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#0d1117;color:#c9d1d9;font-family:'Cascadia Code','Fira Code','JetBrains Mono',monospace;font-size:14px;line-height:1.5}
-#t{overflow-y:auto;white-space:pre-wrap;word-break:break-word}
-#f{position:fixed;bottom:0;left:0;right:0;display:flex;background:#161b22;border-top:1px solid #30363d}
-#i{flex:1;background:transparent;border:none;color:#c9d1d9;font:inherit;padding:12px 16px;outline:none}
-.prompt{color:#58a6ff}.output{color:#7ee787}.error{color:#f85149}.info{color:#8b949e}
-</style></head>
-<body><div id="t"><span class="info">MKS-CODE Terminal</span></div>
-<div id="f"><input id="i" placeholder="> type a command…" autofocus/></div>
-<script>
-const{ipcRenderer}=require('electron'),t=document.getElementById('t'),i=document.getElementById('i');
-ipcRenderer.on('agent:output',(_,d)=>{const e=document.createElement('div');
-if(d.type==='error')e.className='error';else if(d.type==='prompt')e.className='prompt';else e.className='output';
-e.textContent=d.text;t.appendChild(e);t.scrollTop=t.scrollHeight});
-i.addEventListener('keydown',e=>{if(e.key==='Enter'&&i.value.trim()){const s='> '+i.value.trim();
-const l=document.createElement('div');l.className='prompt';l.textContent=s;t.appendChild(l);
-ipcRenderer.invoke('agent:send',i.value.trim());i.value=''}
-if(e.key==='c'&&(e.ctrlKey||e.metaKey)){ipcRenderer.send('agent:cancel');
-const d=document.createElement('div');d.className='info';d.textContent='^C';t.appendChild(d)}});
-</script></body></html>`;
+  let origin: string;
+  try {
+    origin = backend.getOrigin();
+  } catch {
+    // Backend not up yet — nothing to load. Surface it instead of crashing.
+    dialog.showErrorBox('MakeStudio Code', 'O backend ainda não está pronto.');
+    return;
+  }
 
   agentWindow = new BrowserWindow({
-    width: 900, height: 700, minWidth: 600, minHeight: 400,
-    title: 'MKS-CODE Terminal', autoHideMenuBar: true,
+    width: 900,
+    height: 700,
+    minWidth: 600,
+    minHeight: 400,
+    title: 'MakeStudio Code',
+    backgroundColor: '#0d1117',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: true,
+      sandbox: true,
     },
   });
-  agentWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(template)}`);
-  agentWindow.on('closed', () => { agentWindow = null; });
+
+  agentWindow.loadURL(`${origin}/?view=agent`).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('[product:kanban] failed to load agent window', err);
+  });
+  agentWindow.on('closed', () => {
+    agentWindow = null;
+  });
 }
 
 // ── App lifecycle ─────────────────────────────────────────────────────────
-app.setName('MakeStudio Kanban');
 
 app.on('before-quit', async () => {
   isQuitting = true;
+  agentPty.killAll();
   await Promise.all([backend.stop(), agent.stop()]);
 });
 

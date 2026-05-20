@@ -9,6 +9,7 @@ import { useDeepLink } from './useDeepLink';
 import { UpdateBanner } from './UpdateBanner';
 import { ConnectionBadge } from './ConnectionBadge';
 import { AgentTerminal } from './AgentTerminal';
+import { AgentWindow } from './AgentWindow';
 
 const Login = lazy(() =>
   import('@/pages/auth/Login').then((m) => ({ default: (m as any).Login ?? (m as any).default })),
@@ -42,6 +43,14 @@ export const KanbanApp: React.FC = () => {
   useTheme();
   useKanbanNotifications();
   useDeepLink();
+
+  // Standalone MakeStudio Code window (desktop shell loads it with ?view=agent).
+  // Renders only the agent terminal — no auth/board needed, it talks to the
+  // agent over IPC directly.
+  const isAgentWindow =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('view') === 'agent';
+  if (isAgentWindow) return <AgentWindow />;
 
   // Block rendering until the OS keychain has been read (Electron only).
   // In the browser, hydrated starts true so there's no delay.

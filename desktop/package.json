@@ -13,10 +13,12 @@
     "pack": "bash scripts/pack-kanban.sh",
     "pack:dir": "bash scripts/pack-kanban.sh && electron-builder --dir --config electron-builder.json",
     "dev": "npm run build && electron --no-sandbox .",
-    "postinstall": "electron-builder install-app-deps"
+    "fix:pty-perms": "chmod +x node_modules/node-pty/prebuilds/darwin-*/spawn-helper 2>/dev/null || true",
+    "postinstall": "electron-builder install-app-deps && npm run fix:pty-perms"
   },
   "dependencies": {
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "node-pty": "^1.1.0"
   },
   "devDependencies": {
     "@electron/rebuild": "^3.7.0",

@@ -58,6 +58,36 @@ contextBridge.exposeInMainWorld('kanbanDesktop', {
     },
     restart: (): Promise<void> => ipcRenderer.invoke('agent:restart'),
     isRunning: (): Promise<boolean> => ipcRenderer.invoke('agent:isRunning'),
+    /** Open (or focus) MakeStudio Code in its own standalone window. */
+    openWindow: (): Promise<boolean> => ipcRenderer.invoke('agent:open-window'),
+  },
+
+  // ── MakeStudio Code TUI over a pseudo-terminal (xterm.js ↔ node-pty) ─────
+  pty: {
+    /** Spawn a TUI session bound to this window; resolves to its session id. */
+    start: (opts: { cols?: number; rows?: number }): Promise<string> =>
+      ipcRenderer.invoke('agent:pty:start', opts),
+    write: (id: string, data: string): void =>
+      ipcRenderer.send('agent:pty:write', id, data),
+    resize: (id: string, cols: number, rows: number): void =>
+      ipcRenderer.send('agent:pty:resize', id, cols, rows),
+    kill: (id: string): void => ipcRenderer.send('agent:pty:kill', id),
+    /** Stream output for a session. Returns an unsubscribe fn. */
+    onData: (id: string, cb: (data: string) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, p: { id: string; data: string }) => {
+        if (p.id === id) cb(p.data);
+      };
+      ipcRenderer.on('agent:pty:data', handler);
+      return () => ipcRenderer.removeListener('agent:pty:data', handler);
+    },
+    /** Notified when a session's process exits. Returns an unsubscribe fn. */
+    onExit: (id: string, cb: (exitCode: number) => void): (() => void) => {
+      const handler = (_e: IpcRendererEvent, p: { id: string; exitCode: number }) => {
+        if (p.id === id) cb(p.exitCode);
+      };
+      ipcRenderer.on('agent:pty:exit', handler);
+      return () => ipcRenderer.removeListener('agent:pty:exit', handler);
+    },
   },
 
   // ── Board library — file-per-board model ────────────────────────────────
