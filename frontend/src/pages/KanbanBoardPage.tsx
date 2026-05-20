@@ -3242,7 +3242,7 @@ export const KanbanBoardPage: React.FC = () => {
                           </button>
                         </div>
                       ))}
-                      <AddCustomFieldInline board={board} setBoard={setBoard} />
+                      <AddCustomFieldInline board={board!} setBoard={setBoard} />
                     </div>
 
                     {/* C5 – Granular permissions */}

@@ -38,3 +38,5 @@ coverage/
 data/
 *.sqlite
 *.sqlite-*
+.makestudio/.setup-fired
+docs/plans/

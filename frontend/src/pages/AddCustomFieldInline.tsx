@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
-import type { KanbanBoardPageBoard } from './kanban-board-types';
+import type { KanbanBoard } from '../services/kanban.service';
 
 type FieldType = 'text' | 'number' | 'date' | 'checkbox' | 'dropdown';
 
 interface Props {
-  board: KanbanBoardPageBoard;
-  setBoard: (b: KanbanBoardPageBoard) => void;
+  board: KanbanBoard;
+  setBoard: (b: KanbanBoard) => void;
 }
 
 /**
@@ -28,7 +28,7 @@ export const AddCustomFieldInline: React.FC<Props> = ({ board, setBoard }) => {
         ...(board.customFieldDefs ?? []),
         { id: crypto.randomUUID(), name: trimmed, type },
       ],
-    } as KanbanBoardPageBoard;
+    } as KanbanBoard;
     setBoard(next);
     setName('');
     setType('text');
