@@ -3,7 +3,7 @@ import { Terminal, X, Maximize2, Minimize2, RotateCw, SquareArrowOutUpRight } fr
 import { AgentTuiTerminal } from './AgentTuiTerminal';
 import { AgentLaunchPicker } from './AgentLaunchPicker';
 
-const openInWindow = () => (window as any).kanbanDesktop?.agent?.openWindow?.();
+const openMakeStudio = () => (window as any).kanbanDesktop?.agent?.openMakeStudio?.();
 
 /** Embedded footer panel hosting the real MakeStudio Code TUI (xterm + pty). */
 export const AgentTerminal: React.FC = () => {
@@ -56,7 +56,7 @@ export const AgentTerminal: React.FC = () => {
               if (mode === 'tui') {
                 setOpen(true);
               } else {
-                openInWindow();
+                openMakeStudio();
               }
             }}
           />

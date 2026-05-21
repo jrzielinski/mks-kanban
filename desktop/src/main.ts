@@ -31,6 +31,7 @@ import {
 import * as path from 'path';
 import * as fs from 'fs';
 import * as http from 'http';
+import { spawn } from 'child_process';
 import { AuthSession } from './authStore';
 import { loadWindowState, saveWindowState, WindowState } from './windowState';
 import { setupUpdater } from './updater';
@@ -514,6 +515,48 @@ ipcMain.handle('agent:toggle-standalone', () => {
 // Open (or focus) the standalone MakeStudio Code window.
 ipcMain.handle('agent:open-window', () => {
   createAgentWindow();
+  return true;
+});
+
+/**
+ * Launch the full MakeStudio Code Electron app (gptapi/agent/desktop) as a
+ * completely separate process. Uses the gptapi's own Electron binary so the
+ * two apps stay independent — closing one doesn't affect the other.
+ */
+ipcMain.handle('agent:open-makestudio', () => {
+  // Resolve gptapi desktop entry and its Electron binary
+  const home = app.getPath('home');
+  const candidates = {
+    entry: [
+      path.join(home, 'gptapi', 'agent', 'desktop', 'dist', 'main.js'),
+      path.join(__dirname, '..', '..', '..', 'gptapi', 'agent', 'desktop', 'dist', 'main.js'),
+    ],
+    electron: [
+      path.join(home, 'gptapi', 'agent', 'desktop', 'node_modules', 'electron', 'dist', 'electron'),
+      // fallback: use our own Electron binary (same version)
+      path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron'),
+    ],
+  };
+
+  const entry    = candidates.entry.find(fs.existsSync);
+  const electron = candidates.electron.find(fs.existsSync);
+
+  if (!entry || !electron) {
+    dialog.showErrorBox(
+      'MakeStudio Code',
+      `App não encontrado.\n\nVerifique se o gptapi está buildado:\n  cd ~/gptapi/agent/desktop && npm run build`,
+    );
+    return false;
+  }
+
+  const child = spawn(electron, ['--no-sandbox', entry], {
+    detached: true,
+    stdio: 'ignore',
+    cwd: path.dirname(entry),
+  });
+  child.unref(); // não bloqueia o kanban quando o MakeStudio for fechado
+  // eslint-disable-next-line no-console
+  console.log(`[product:kanban] launched MakeStudio Code (pid=${child.pid})`);
   return true;
 });
 

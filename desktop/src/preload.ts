@@ -58,8 +58,10 @@ contextBridge.exposeInMainWorld('kanbanDesktop', {
     },
     restart: (): Promise<void> => ipcRenderer.invoke('agent:restart'),
     isRunning: (): Promise<boolean> => ipcRenderer.invoke('agent:isRunning'),
-    /** Open (or focus) MakeStudio Code in its own standalone window. */
+    /** Open (or focus) MakeStudio Code in its own standalone window (kanban BrowserWindow). */
     openWindow: (): Promise<boolean> => ipcRenderer.invoke('agent:open-window'),
+    /** Launch the full gptapi MakeStudio Code Electron app as a separate process. */
+    openMakeStudio: (): Promise<boolean> => ipcRenderer.invoke('agent:open-makestudio'),
   },
 
   // ── MakeStudio Code TUI over a pseudo-terminal (xterm.js ↔ node-pty) ─────
