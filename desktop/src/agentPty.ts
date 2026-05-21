@@ -53,6 +53,14 @@ export function start(wc: WebContents, opts: { cols?: number; rows?: number }): 
   env.MAKESTUDIO_PRODUCT = process.env.MAKESTUDIO_PRODUCT || 'kanban';
   env.TERM = 'xterm-256color';
   env.FORCE_COLOR = '1';
+  // ELECTRON_RUN_AS_NODE=1 prevents isTTY from being detected correctly even
+  // when spawned via node-pty (real PTY). MAKESTUDIO_PTY=1 tells the agent
+  // to force TUI mode regardless of isTTY.
+  env.MAKESTUDIO_PTY = '1';
+  // Suppress warn-level logs (findImportCandidate CLAUDE.md search warnings).
+  // The agent searches cwd + 3 parent dirs for CLAUDE.md/AGENT.md on every
+  // startup — each missing file logs a warn. Set error to silence them.
+  env.LOG_LEVEL = 'error';
 
   const proc = pty.spawn(process.execPath, [entry], {
     name: 'xterm-256color',
