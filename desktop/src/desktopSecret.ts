@@ -18,6 +18,8 @@ export interface DesktopSecret {
   jwtSecret: string;
   adminEmail: string;
   adminPassword: string;
+  /** AES-256 key for the backend EncryptionService — must stay stable across restarts. */
+  encryptionKey: string;
 }
 
 function secretFile(): string {
@@ -32,7 +34,17 @@ export function loadOrCreateSecret(): DesktopSecret {
       const json = safeStorage.isEncryptionAvailable()
         ? safeStorage.decryptString(raw)
         : raw.toString('utf-8');
-      return JSON.parse(json) as DesktopSecret;
+      const parsed = JSON.parse(json) as DesktopSecret;
+      // Backfill encryptionKey for installations that predate this field
+      if (!parsed.encryptionKey) {
+        parsed.encryptionKey = crypto.randomBytes(32).toString('hex');
+        const updated = JSON.stringify(parsed);
+        const data = safeStorage.isEncryptionAvailable()
+          ? safeStorage.encryptString(updated)
+          : Buffer.from(updated, 'utf-8');
+        fs.writeFileSync(file, data, { mode: 0o600 });
+      }
+      return parsed;
     }
   } catch {
     // unreadable — regenerate
@@ -42,6 +54,7 @@ export function loadOrCreateSecret(): DesktopSecret {
     jwtSecret: crypto.randomBytes(48).toString('hex'),
     adminEmail: 'admin@kanban.local',
     adminPassword: crypto.randomBytes(16).toString('hex'),
+    encryptionKey: crypto.randomBytes(32).toString('hex'),
   };
   const json = JSON.stringify(fresh);
   const data = safeStorage.isEncryptionAvailable()

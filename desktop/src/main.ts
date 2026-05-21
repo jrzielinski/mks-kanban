@@ -39,6 +39,7 @@ import * as agent from './agentProcess';
 import * as agentPty from './agentPty';
 import * as library from './boardLibrary';
 import * as license from './licenseStore';
+import { loadOrCreateSecret } from './desktopSecret';
 import { startOAuthFlow } from './oauthLoopback';
 import { initLogger, getLogFilePath } from './logger';
 
@@ -377,9 +378,14 @@ async function createWindow(): Promise<void> {
   // ── Boot embedded backend pointing at the active board file ────────────
   try {
     const active = ensureActiveBoard();
+    const secret = loadOrCreateSecret();
     // The MakeStudio Code agent is no longer pre-forked here — each terminal
     // view spawns its own TUI session on demand via agentPty (node-pty).
-    await backend.start({ databasePath: active.filePath });
+    await backend.start({
+      databasePath: active.filePath,
+      jwtSecret: secret.jwtSecret,
+      encryptionKey: secret.encryptionKey,
+    });
     await backend.waitForHealth();
 
     // Offline/local mode — auth against the embedded backend instead of remote identity

@@ -70,9 +70,13 @@ function pickFreePort(): Promise<number> {
 export interface StartOptions {
   databasePath: string;
   port?: number;
+  /** Persistent HS256 signing key (hex). Generated randomly if omitted. */
+  jwtSecret?: string;
+  /** Persistent AES-256 encryption key (hex). Generated randomly if omitted — unstable across restarts! */
+  encryptionKey?: string;
 }
 
-export async function start({ databasePath, port: fixedPort }: StartOptions): Promise<void> {
+export async function start({ databasePath, port: fixedPort, jwtSecret, encryptionKey }: StartOptions): Promise<void> {
   if (child) await stop();
 
   const entry = resolveBackendEntry();
@@ -83,7 +87,8 @@ export async function start({ databasePath, port: fixedPort }: StartOptions): Pr
 
   fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 
-  const localSecret = randomBytes(32).toString('hex');
+  const localSecret = jwtSecret ?? randomBytes(32).toString('hex');
+  const encKey = encryptionKey ?? randomBytes(32).toString('hex');
   __bootstrapToken = randomBytes(16).toString('hex');
 
   child = fork(entry, [], {
@@ -97,6 +102,7 @@ export async function start({ databasePath, port: fixedPort }: StartOptions): Pr
       DATABASE_PATH: databasePath,
       LOCAL_JWT_SECRET: localSecret,
       LOCAL_BOOTSTRAP_TOKEN: __bootstrapToken,
+      ENCRYPTION_KEY: encKey,
       IDENTITY_ISSUER,
       IDENTITY_JWKS_URI,
       IDENTITY_AUDIENCE: process.env.IDENTITY_AUDIENCE ?? 'mks-kanban',

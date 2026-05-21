@@ -38,7 +38,46 @@ function resolveAgentEntry(): string {
   );
 }
 
+/**
+ * Ensure a CLAUDE.md anchor exists in the user's home directory.
+ *
+ * The agent's findImportCandidate() walks up to 3 parent directories looking
+ * for CLAUDE.md / AGENT.md. Without one it stat()-fails every candidate and
+ * logs a warn for each miss — 10-20 warns per startup that clutter the
+ * terminal. A non-empty CLAUDE.md at $HOME stops the walk immediately.
+ *
+ * We create it automatically and recreate it if the user deletes it.
+ */
+const HOME_CLAUDE_MD = path.join(os.homedir(), 'CLAUDE.md');
+const HOME_CLAUDE_CONTENT = `# MakeStudio Kanban — workspace root
+
+This file was created automatically by MakeStudio Kanban so the embedded
+MakeStudio Code agent has a project root anchor at your home directory.
+
+You can add project-wide instructions here that the agent will read on every
+session. If you delete this file it will be recreated on next launch.
+`;
+
+function ensureHomeClaude(): void {
+  let exists = false;
+  try {
+    exists = fs.statSync(HOME_CLAUDE_MD).size > 0;
+  } catch { /* file missing */ }
+
+  if (!exists) {
+    fs.writeFileSync(HOME_CLAUDE_MD, HOME_CLAUDE_CONTENT, 'utf-8');
+    // eslint-disable-next-line no-console
+    console.log(
+      `[pty] Created ${HOME_CLAUDE_MD} — this gives the agent a workspace ` +
+      `root anchor and stops it from searching parent directories on startup. ` +
+      `You can add project-wide instructions there. If you delete it, it will ` +
+      `be recreated automatically.`,
+    );
+  }
+}
+
 export function start(wc: WebContents, opts: { cols?: number; rows?: number }): string {
+  ensureHomeClaude();
   const id = randomBytes(8).toString('hex');
   const entry = resolveAgentEntry();
 
