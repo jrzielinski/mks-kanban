@@ -1,11 +1,24 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  HttpCode,
+  HttpStatus,
+  Req,
+  UseGuards,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './auth.guard';
 import { JwtPayload } from './jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly jwt: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly cfg: ConfigService,
+  ) {}
 
   /** Echo the JWT claims so the frontend can get a fresh user object post-login. */
   @Get('me')
@@ -22,72 +35,49 @@ export class AuthController {
     };
   }
 
-  @Post('email/login')
+  /**
+   * Desktop-only auto-login endpoint.
+   *
+   * Issues a long-lived HS256 token for the single local user.
+   * Only available when running in SQLite / desktop mode — returns 403
+   * in web/Postgres mode so it cannot be abused on a shared server.
+   *
+   * The Electron main process calls this right after the embedded backend
+   * boots, stores the token in the OS keychain, and injects it into the
+   * renderer via the IPC auth bridge. The user never sees a login screen.
+   */
+  @Post('desktop-token')
   @HttpCode(HttpStatus.OK)
-  emailLogin(@Body() body: { email: string; password: string }) {
-    const localSecret = process.env.LOCAL_JWT_SECRET;
-    if (!localSecret) {
-      return { error: 'LOCAL_JWT_SECRET not configured', statusCode: 500 };
+  desktopToken() {
+    const isDesktop = (this.cfg.get<string>('DB_DRIVER') ?? 'postgres') === 'sqlite';
+    if (!isDesktop) {
+      throw new ForbiddenException('desktop-token is only available in desktop mode');
     }
 
-    if (body.email === 'admin@zielinski.dev.br' && body.password === 'password@123') {
-      const localUser: JwtPayload = {
-        sub: 'local-admin',
-        email: 'admin@zielinski.dev.br',
-        name: 'Admin Desktop',
-        role: 'admin',
-        tenantId: 'staff',
-      };
-
-      const token = this.jwt.sign(localUser, {
-        secret: Buffer.from(localSecret, 'hex'),
-        algorithm: 'HS256',
-        expiresIn: '24h',
-      });
-
-      return {
-        token,
-        refreshToken: token,
-        user: localUser,
-      };
-    }
-
-    return { error: 'Invalid credentials', statusCode: 401 };
-  }
-
-  @Post('local-login')
-  @HttpCode(HttpStatus.OK)
-  localLogin(@Body() body: { token: string }) {
-    const bootstrapToken = process.env.LOCAL_BOOTSTRAP_TOKEN;
-    if (!bootstrapToken || body.token !== bootstrapToken) {
-      return { error: 'Invalid bootstrap token', statusCode: 401 };
-    }
-
-    const localSecret = process.env.LOCAL_JWT_SECRET;
-    if (!localSecret) {
-      return { error: 'LOCAL_JWT_SECRET not configured', statusCode: 500 };
-    }
-
-    const localUser: JwtPayload = {
-      sub: 'local-admin',
-      email: 'admin@local',
-      name: 'Local Admin',
-      tenantId: 'staff',
+    const payload: JwtPayload & Record<string, unknown> = {
+      sub: 'desktop-user',
+      sessionId: 'desktop',
+      tenantId: 'desktop',
+      email: 'local@makestudio',
+      name: 'Local User',
       role: 'admin',
     };
 
-    const token = this.jwt.sign(localUser, {
-      secret: Buffer.from(localSecret, 'hex'),
-      algorithm: 'HS256',
-      expiresIn: '24h',
-    });
-
-    const decoded = this.jwt.decode(token) as any;
+    // 1 year — effectively never expires for a local single-user app
+    const token = this.jwtService.sign(payload, { expiresIn: '365d' });
+    const exp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
 
     return {
       token,
-      expiresAt: decoded.exp,
-      user: localUser,
+      tokenExpires: exp,
+      user: {
+        id: payload.sub,
+        email: payload.email,
+        firstName: 'Local',
+        lastName: 'User',
+        tenantId: payload.tenantId,
+        role: payload.role,
+      },
     };
   }
 }

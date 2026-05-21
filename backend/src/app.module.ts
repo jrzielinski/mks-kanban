@@ -8,6 +8,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health.controller';
+import { LicensingController } from './licensing/licensing.controller';
 import { KanbanModule } from './kanban/kanban.module';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { MailerModule } from './mailer/mailer.module';
@@ -100,6 +101,6 @@ const STATIC_MODULES: DynamicModule[] = (() => {
     KanbanModule,
     AiModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, LicensingController],
 })
 export class AppModule {}
