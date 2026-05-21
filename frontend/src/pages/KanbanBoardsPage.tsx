@@ -7,6 +7,7 @@ import { Plus, LayoutGrid, Trash2, X, Star, Globe, Lock, Users, FolderOpen, Chev
 import toast from 'react-hot-toast';
 import kanbanService, { KanbanBoard, KanbanList } from '@/services/kanban.service';
 import { useConfirm } from '@/hooks/useConfirm';
+import { UserMenu } from '@/components/UserMenu';
 
 const BOARD_COLORS = [
   '#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444',
@@ -395,7 +396,7 @@ export const KanbanBoardsPage: React.FC = () => {
             <LayoutGrid className="w-7 h-7 text-blue-500" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('kanbanBoardsPage.labels.pageTitle')}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={showDashboard ? () => setShowDashboard(false) : () => void loadDashboard()}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showDashboard ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
@@ -414,6 +415,9 @@ export const KanbanBoardsPage: React.FC = () => {
             >
               <Plus className="w-4 h-4" /> {t('kanbanBoardsPage.actions.newBoard')}
             </button>
+            <div className="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
+              <UserMenu />
+            </div>
           </div>
         </div>
 

@@ -7,7 +7,11 @@ const openInWindow = () => (window as any).kanbanDesktop?.agent?.openWindow?.();
 /** Embedded footer panel hosting the real MakeStudio Code TUI (xterm + pty). */
 export const AgentTerminal: React.FC = () => {
   const [open, setOpen] = useState(false);
-  const [heightPx, setHeightPx] = useState(260);
+  // Initial height fits the full MakeStudio Code TUI opening banner (ASCII
+  // logo + model/path/user + tips + prompt + status line ≈ 15 rows) without
+  // clipping. Was 260px, which cut off the top of the banner. User can still
+  // resize (drag handle) or maximize.
+  const [heightPx, setHeightPx] = useState(400);
   const [maximized, setMaximized] = useState(false);
   const [sessionKey, setSessionKey] = useState(0); // bump to respawn the TUI
   const hostRef = useRef<HTMLDivElement>(null);

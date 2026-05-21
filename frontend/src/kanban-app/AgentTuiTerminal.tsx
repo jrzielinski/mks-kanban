@@ -48,6 +48,11 @@ export const AgentTuiTerminal: React.FC<{ className?: string }> = ({ className }
     let sessionId: string | null = null;
     let offData: (() => void) | undefined;
     let offExit: (() => void) | undefined;
+    // A real terminal always shows the live region after a resize; xterm.js does
+    // NOT auto-follow to the bottom, so the TUI's post-resize repaint lands in
+    // scrollback out of view. While this window is open we keep snapping the
+    // viewport to the bottom on each output chunk, exactly as a TTY would.
+    let pinUntil = 0;
 
     term.onData((d) => {
       if (sessionId) pty.write(sessionId, d);
@@ -59,7 +64,11 @@ export const AgentTuiTerminal: React.FC<{ className?: string }> = ({ className }
         return;
       }
       sessionId = id;
-      offData = pty.onData(id, (data: string) => term.write(data));
+      offData = pty.onData(id, (data: string) =>
+        term.write(data, () => {
+          if (Date.now() < pinUntil) term.scrollToBottom();
+        }),
+      );
       offExit = pty.onExit(id, () =>
         term.write('\r\n\x1b[90m[sessão encerrada]\x1b[0m\r\n'),
       );
@@ -74,7 +83,6 @@ export const AgentTuiTerminal: React.FC<{ className?: string }> = ({ className }
     let lastCols = term.cols;
     let lastRows = term.rows;
     let debounce: ReturnType<typeof setTimeout> | undefined;
-    let scrollTimer: ReturnType<typeof setTimeout> | undefined;
     let raf = 0;
     const applyFit = () => {
       try {
@@ -86,11 +94,11 @@ export const AgentTuiTerminal: React.FC<{ className?: string }> = ({ className }
         lastCols = term.cols;
         lastRows = term.rows;
         if (sessionId) pty.resize(sessionId, term.cols, term.rows);
-        // The TUI re-renders its dynamic area at the bottom ~50ms after the
-        // SIGWINCH (it debounces). Pin the viewport to that fresh bottom only
-        // after it has repainted, so we never park in the pushed-up scrollback.
-        clearTimeout(scrollTimer);
-        scrollTimer = setTimeout(() => term.scrollToBottom(), 200);
+        // Pin to the bottom across the whole post-resize repaint window: the TUI
+        // debounces ~50ms then streams its new frame over several chunks, and
+        // each chunk's onData callback re-snaps us to the live region.
+        pinUntil = Date.now() + 1200;
+        term.scrollToBottom();
       }
     };
     const onResize = () => {
@@ -107,7 +115,6 @@ export const AgentTuiTerminal: React.FC<{ className?: string }> = ({ className }
     return () => {
       disposed = true;
       clearTimeout(debounce);
-      clearTimeout(scrollTimer);
       cancelAnimationFrame(raf);
       ro.disconnect();
       window.removeEventListener('resize', onResize);

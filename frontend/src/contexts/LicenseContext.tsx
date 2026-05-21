@@ -73,6 +73,18 @@ export const LicenseProvider: React.FC<LicenseProviderProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   const fetchLicenseInfo = async () => {
+    // Desktop (Electron) runs an embedded backend that does NOT serve
+    // /api/v1/licensing/* — licensing there is handled by the desktop shell.
+    // Skip the HTTP probe so it doesn't spam 404s in the console; behaviour is
+    // the same as the previous error path (no config/status).
+    if ((window as any).kanbanDesktop) {
+      setConfig(null);
+      setStatus(null);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);

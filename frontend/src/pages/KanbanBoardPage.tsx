@@ -1499,7 +1499,7 @@ export const KanbanBoardPage: React.FC = () => {
             </div>
 
             {/* Search */}
-            <div className="ml-2 hidden min-w-[280px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm lg:flex dark:border-gray-600 dark:bg-gray-700">
+            <div className="ml-2 hidden min-w-[280px] flex-1 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm lg:flex dark:border-gray-700/80 dark:bg-gray-800">
               <Search className="h-4 w-4 flex-shrink-0 text-slate-400" />
               <input
                 value={searchQuery}
