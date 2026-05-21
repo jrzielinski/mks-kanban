@@ -3,7 +3,7 @@ import { Terminal, X, Maximize2, Minimize2, RotateCw, SquareArrowOutUpRight } fr
 import { AgentTuiTerminal } from './AgentTuiTerminal';
 import { AgentLaunchPicker } from './AgentLaunchPicker';
 
-const openStandaloneWindow = () => (window as any).kanbanDesktop?.agent?.openWindow?.();
+const openMakeStudio = () => (window as any).kanbanDesktop?.agent?.openMakeStudio?.();
 
 /** Embedded footer panel hosting the real MakeStudio Code TUI (xterm + pty). */
 export const AgentTerminal: React.FC = () => {
@@ -56,7 +56,7 @@ export const AgentTerminal: React.FC = () => {
               if (mode === 'tui') {
                 setOpen(true);
               } else {
-                openStandaloneWindow();
+                openMakeStudio();
               }
             }}
           />
@@ -80,7 +80,7 @@ export const AgentTerminal: React.FC = () => {
         </div>
         <div className="flex items-center gap-1">
           <button
-            onClick={openStandaloneWindow}
+            onClick={openMakeStudio}
             className="rounded p-1 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200 transition-colors"
             title="Abrir em janela"
           >

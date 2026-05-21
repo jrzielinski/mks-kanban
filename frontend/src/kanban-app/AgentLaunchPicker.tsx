@@ -31,8 +31,8 @@ const OPTIONS: { mode: AgentLaunchMode; label: string; description: string; prev
   },
   {
     mode: 'window',
-    label: 'Janela separada',
-    description: 'Abre o MakeStudio Code em uma janela dedicada (independente do painel kanban).',
+    label: 'App MakeStudio',
+    description: 'Abre o MakeStudio Code como aplicativo separado (processo Electron independente).',
     preview: (
       <div className="flex h-full flex-col overflow-hidden rounded border border-zinc-700 bg-[#0d1117]">
         {/* Window chrome */}
