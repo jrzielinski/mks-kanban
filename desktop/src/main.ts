@@ -162,17 +162,15 @@ function handleDeepLink(url: string): void {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────
 
-/** Authenticate locally using the bootstrap token.
- *  The embedded backend generates a one-time bootstrap token on each start.
- *  POST it to /auth/local-login, get a 24h JWT back, store in memory. */
-
-async function ensureLocalSignedIn(bootstrapToken: string): Promise<void> {
+/**
+ * Obtain a long-lived desktop token from the embedded backend.
+ * POST /api/v1/auth/desktop-token — no credentials required, only works
+ * when LOCAL_JWT_SECRET is set (i.e. the backend is running in desktop mode).
+ */
+async function ensureLocalSignedIn(): Promise<void> {
   try {
     const origin = backend.getOrigin();
-    const url = new URL('/api/v1/auth/email/login', origin);
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@zielinski.dev.br';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'password@123';
-    const body = JSON.stringify({ email: adminEmail, password: adminPassword });
+    const url = new URL('/api/v1/auth/desktop-token', origin);
 
     const result = await new Promise<AuthSession | null>((resolve) => {
       const req = http.request(
@@ -181,10 +179,7 @@ async function ensureLocalSignedIn(bootstrapToken: string): Promise<void> {
           host: url.hostname,
           port: Number(url.port) || 80,
           path: url.pathname,
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(body),
-          },
+          headers: { 'Content-Type': 'application/json', 'Content-Length': 0 },
           timeout: 5_000,
         },
         (res) => {
@@ -197,7 +192,7 @@ async function ensureLocalSignedIn(bootstrapToken: string): Promise<void> {
                 resolve({
                   token: json.token,
                   refreshToken: '',
-                  accessTokenExp: json.expiresAt,
+                  accessTokenExp: json.tokenExpires,
                   user: json.user,
                 });
               } else {
@@ -211,7 +206,6 @@ async function ensureLocalSignedIn(bootstrapToken: string): Promise<void> {
       );
       req.on('error', () => resolve(null));
       req.on('timeout', () => { req.destroy(); resolve(null); });
-      req.write(body);
       req.end();
     });
 
@@ -389,10 +383,7 @@ async function createWindow(): Promise<void> {
     await backend.waitForHealth();
 
     // Offline/local mode — auth against the embedded backend instead of remote identity
-    const bootstrapToken = backend.getBootstrapToken();
-    if (bootstrapToken) {
-      await ensureLocalSignedIn(bootstrapToken);
-    }
+    await ensureLocalSignedIn();
   } catch (err) {
     clearTimeout(splashTimeout);
     dismissSplash();

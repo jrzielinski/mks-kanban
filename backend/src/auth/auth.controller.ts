@@ -1,24 +1,20 @@
 import {
   Controller,
+  ForbiddenException,
   Get,
-  Post,
   HttpCode,
   HttpStatus,
+  Post,
   Req,
   UseGuards,
-  ForbiddenException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './auth.guard';
 import { JwtPayload } from './jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly cfg: ConfigService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
 
   /** Echo the JWT claims so the frontend can get a fresh user object post-login. */
   @Get('me')
@@ -39,8 +35,8 @@ export class AuthController {
    * Desktop-only auto-login endpoint.
    *
    * Issues a long-lived HS256 token for the single local user.
-   * Only available when running in SQLite / desktop mode — returns 403
-   * in web/Postgres mode so it cannot be abused on a shared server.
+   * Only available when LOCAL_JWT_SECRET is set (desktop/SQLite mode) —
+   * returns 403 in web/Postgres mode so it cannot be abused on a shared server.
    *
    * The Electron main process calls this right after the embedded backend
    * boots, stores the token in the OS keychain, and injects it into the
@@ -49,8 +45,7 @@ export class AuthController {
   @Post('desktop-token')
   @HttpCode(HttpStatus.OK)
   desktopToken() {
-    const isDesktop = (this.cfg.get<string>('DB_DRIVER') ?? 'postgres') === 'sqlite';
-    if (!isDesktop) {
+    if (!process.env.LOCAL_JWT_SECRET) {
       throw new ForbiddenException('desktop-token is only available in desktop mode');
     }
 
@@ -63,7 +58,9 @@ export class AuthController {
       role: 'admin',
     };
 
-    // 1 year — effectively never expires for a local single-user app
+    // JwtModule is configured with Buffer.from(LOCAL_JWT_SECRET, 'hex') —
+    // same secret that JwtStrategy verifies against, so sign ↔ verify always agree.
+    // 1 year — effectively never expires for a local single-user app.
     const token = this.jwtService.sign(payload, { expiresIn: '365d' });
     const exp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
 

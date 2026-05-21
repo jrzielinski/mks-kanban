@@ -1,60 +1,55 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { ConfigService } from '@nestjs/config';
 
 export interface JwtPayload {
   sub: string;
-  sessionId: string;
+  sessionId?: string;
   tenantId: string;
-  email: string;
-  name: string | null;
-  role: string;
+  email?: string;
+  name?: string | null;
+  role?: string;
 }
 
 /**
  * JWT strategy that supports two modes:
  *
- *  - **Desktop / SQLite** (`DB_DRIVER=sqlite`): HS256 with a local secret
- *    (`JWT_SECRET` env). jwks-rsa is NOT imported — avoids the ESM/CJS
+ *  - **Desktop / offline** (`LOCAL_JWT_SECRET` env set): HS256 with the
+ *    hex-encoded secret. jwks-rsa is NOT imported — avoids the ESM/CJS
  *    incompatibility when running inside Electron's bundled Node.
  *
  *  - **Web / Postgres** (default): RS256 + JWKS from `mks-identity`.
- *    jwks-rsa is loaded lazily via require() only in this branch.
+ *    jwks-rsa is loaded lazily via inline require() only in this branch
+ *    so the import never runs in desktop mode.
  */
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(cfg: ConfigService) {
-    const isDesktop = (cfg.get<string>('DB_DRIVER') ?? 'postgres') === 'sqlite';
+  constructor() {
+    const localSecret = process.env.LOCAL_JWT_SECRET;
 
-    if (isDesktop) {
-      // ── Local HS256 — zero external deps, works inside Electron ──────
-      const secret = cfg.get<string>('JWT_SECRET');
-      if (!secret) throw new Error('JWT_SECRET is required in desktop (SQLite) mode');
-
+    if (localSecret) {
+      // ── Desktop mode: symmetric HS256, no external deps ──────────────
       super({
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         ignoreExpiration: false,
+        secretOrKey: Buffer.from(localSecret, 'hex'),
         algorithms: ['HS256'],
-        secretOrKey: secret,
       });
     } else {
-      // ── Remote RS256 via JWKS — web/Postgres only ─────────────────────
-      // Lazy require so jwks-rsa (which pulls in the ESM-only `jose`)
-      // is never touched when running in SQLite/Electron mode.
+      // ── Web mode: RS256 via JWKS (mks-identity) ───────────────────────
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { passportJwtSecret } = require('jwks-rsa') as typeof import('jwks-rsa');
 
       const jwksUri =
-        cfg.get<string>('IDENTITY_JWKS_URI') ??
-        `${cfg.get<string>('IDENTITY_ISSUER') ?? 'http://localhost:3030'}/.well-known/jwks.json`;
+        process.env.IDENTITY_JWKS_URI ??
+        `${process.env.IDENTITY_ISSUER ?? 'http://localhost:3030'}/.well-known/jwks.json`;
 
       super({
         jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
         ignoreExpiration: false,
         algorithms: ['RS256'],
-        issuer: cfg.get<string>('IDENTITY_ISSUER'),
-        audience: cfg.get<string>('IDENTITY_AUDIENCE') ?? 'mks-kanban',
+        issuer: process.env.IDENTITY_ISSUER,
+        audience: process.env.IDENTITY_AUDIENCE ?? 'mks-kanban',
         secretOrKeyProvider: passportJwtSecret({
           jwksUri,
           cache: true,
@@ -68,7 +63,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any): Promise<JwtPayload> {
-    if (!payload.sub) throw new UnauthorizedException();
     return {
       sub: payload.sub,
       sessionId: payload.sessionId ?? '',
