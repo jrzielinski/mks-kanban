@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Terminal, X, Maximize2, Minimize2, RotateCw, SquareArrowOutUpRight } from 'lucide-react';
 import { AgentTuiTerminal } from './AgentTuiTerminal';
+import { AgentLaunchPicker } from './AgentLaunchPicker';
 
 const openInWindow = () => (window as any).kanbanDesktop?.agent?.openWindow?.();
 
 /** Embedded footer panel hosting the real MakeStudio Code TUI (xterm + pty). */
 export const AgentTerminal: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   // Initial height fits the full MakeStudio Code TUI opening banner (ASCII
   // logo + model/path/user + tips + prompt + status line ≈ 15 rows) without
   // clipping. Was 260px, which cut off the top of the banner. User can still
@@ -16,30 +18,50 @@ export const AgentTerminal: React.FC = () => {
   const [sessionKey, setSessionKey] = useState(0); // bump to respawn the TUI
   const hostRef = useRef<HTMLDivElement>(null);
 
-  // Toggle via backtick (`) — unless typing in a field
+  // Backtick (`) — se fechado, abre o picker; se aberto, fecha o painel
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === '`' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === 'INPUT' || tag === 'TEXTAREA') return;
         e.preventDefault();
-        setOpen((v) => !v);
+        if (open) {
+          setOpen(false);
+        } else {
+          setShowPicker((v) => !v);
+        }
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [open]);
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-3 left-3 z-50 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-400 shadow-lg backdrop-blur hover:bg-zinc-800 hover:text-zinc-200 transition-all"
-        title="Abrir MakeStudio Code ( ` )"
-      >
-        <Terminal size={14} />
-        MakeStudio Code
-      </button>
+      <>
+        <button
+          onClick={() => setShowPicker(true)}
+          className="fixed bottom-3 left-3 z-50 flex items-center gap-1.5 rounded-lg border border-zinc-700 bg-zinc-900/90 px-3 py-1.5 text-xs text-zinc-400 shadow-lg backdrop-blur hover:bg-zinc-800 hover:text-zinc-200 transition-all"
+          title="Abrir MakeStudio Code ( ` )"
+        >
+          <Terminal size={14} />
+          MakeStudio Code
+        </button>
+
+        {showPicker && (
+          <AgentLaunchPicker
+            onClose={() => setShowPicker(false)}
+            onSelect={(mode) => {
+              setShowPicker(false);
+              if (mode === 'tui') {
+                setOpen(true);
+              } else {
+                openInWindow();
+              }
+            }}
+          />
+        )}
+      </>
     );
   }
 
