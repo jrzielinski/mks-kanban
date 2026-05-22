@@ -3,18 +3,13 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthController } from './auth.controller';
+import { UsersModule } from '../users/users.module';
+import { AuthService } from './auth.service';
 
 @Module({
   imports: [
     PassportModule.register({ defaultStrategy: 'jwt' }),
-    /**
-     * JwtModule is only used for desktop-token signing (HS256).
-     * In web/JWKS mode this module still loads but JwtService.sign()
-     * is never called — mks-identity handles token issuance.
-     *
-     * The secret is the same LOCAL_JWT_SECRET hex buffer that
-     * JwtStrategy uses for verification, so sign() ↔ verify() always agree.
-     */
+    UsersModule,
     JwtModule.registerAsync({
       useFactory: () => {
         const localSecret = process.env.LOCAL_JWT_SECRET;
@@ -24,7 +19,7 @@ import { AuthController } from './auth.controller';
       },
     }),
   ],
-  providers: [JwtStrategy],
+  providers: [JwtStrategy, AuthService],
   controllers: [AuthController],
   exports: [PassportModule, JwtModule],
 })

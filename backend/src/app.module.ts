@@ -7,6 +7,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import * as fs from 'fs';
 import * as path from 'path';
 import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { HealthController } from './health.controller';
 import { LicensingController } from './licensing/licensing.controller';
 import { KanbanModule } from './kanban/kanban.module';
@@ -94,6 +95,7 @@ const STATIC_MODULES: DynamicModule[] = (() => {
         };
       },
     }),
+    UsersModule,
     AuthModule,
     EncryptionModule,
     MailerModule,

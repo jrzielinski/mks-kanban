@@ -6,6 +6,16 @@ import { User, AuthStore, LoginRequest, RegisterRequest } from '@/types'
 import toast from 'react-hot-toast'
 import api from '@/lib/api'
 
+const tryLocalLogin = async (credentials: LoginRequest) => {
+  const res = await api.post('/auth/login', credentials, { _skipToast: true } as any)
+  return res.data
+}
+
+const tryCloudLogin = async (credentials: LoginRequest) => {
+  const res = await identityApi.post('/auth/email/login', credentials)
+  return res.data
+}
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set, get) => ({
@@ -26,11 +36,18 @@ export const useAuthStore = create<AuthStore>()(
             api.defaults.headers.common['Authorization'] = `Bearer ${token}`
             return result
           }
-          const response = await identityApi.post('/auth/email/login', credentials)
-          const { token, refreshToken, user } = response.data
 
-          // token lives in zustand memory only — never persisted to localStorage
-          localStorage.setItem('refreshToken', refreshToken)
+          // Hybrid login: try local backend first, fallback to cloud
+          let data: { token: string; refreshToken?: string; user: User }
+          try {
+            data = await tryLocalLogin(credentials)
+          } catch {
+            data = await tryCloudLogin(credentials)
+          }
+
+          const { token, refreshToken, user } = data
+
+          if (refreshToken) localStorage.setItem('refreshToken', refreshToken)
 
           set({
             user,
@@ -39,7 +56,7 @@ export const useAuthStore = create<AuthStore>()(
           })
 
           toast.success(i18n.t('authStore.toasts.welcomeBack', {
-            name: user.firstName || user.email,
+            name: (user as any).firstName || user.email,
           }))
         } catch (error: any) {
           if (error.response?.status === 403) {
@@ -72,7 +89,12 @@ export const useAuthStore = create<AuthStore>()(
 
       register: async (data: RegisterRequest) => {
         try {
-          await identityApi.post('/auth/email/register', data)
+          // Try local backend first, fallback to cloud
+          try {
+            await api.post('/auth/register', data, { _skipToast: true } as any)
+          } catch {
+            await identityApi.post('/auth/email/register', data)
+          }
           toast.success(i18n.t('authStore.toasts.registerSuccess'))
         } catch (error: any) {
           if (error.response?.status === 422) {

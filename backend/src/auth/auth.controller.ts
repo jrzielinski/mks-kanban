@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   ForbiddenException,
   Get,
@@ -11,17 +12,67 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { JwtAuthGuard } from './auth.guard';
 import { JwtPayload } from './jwt.strategy';
+import { AuthService } from './auth.service';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
-  /** Echo the JWT claims so the frontend can get a fresh user object post-login. */
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(
+    @Body('email') email: string,
+    @Body('password') password: string,
+    @Body('firstName') firstName?: string,
+    @Body('lastName') lastName?: string,
+  ) {
+    // Try local register first; fallback to cloud sync if email exists
+    if (!process.env.LOCAL_JWT_SECRET) {
+      throw new ForbiddenException('Registro local só disponível em modo desktop');
+    }
+    return this.authService.localRegisterOrCloudSync(email, password, firstName, lastName);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(
+    @Body('email') email: string,
+    @Body('password') password: string,
+  ) {
+    return this.authService.hybridLogin(email, password);
+  }
+
+  /** Returns profile data for the authenticated user. */
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  me(@Req() req: { user: JwtPayload }) {
+  async me(@Req() req: { user: JwtPayload }) {
     const u = req.user;
+
+    // If local user, enrich with stored profile
+    if (u.sub && u.sub !== 'desktop-user') {
+      try {
+        const local = await this.usersService.getMe(u.sub);
+        if (local) {
+          return {
+            id: local.id,
+            email: local.email,
+            name: [local.firstName, local.lastName].filter(Boolean).join(' ') || u.name,
+            firstName: local.firstName,
+            lastName: local.lastName,
+            avatar: local.avatar,
+            tenantId: u.tenantId,
+            role: u.role,
+          };
+        }
+      } catch {}
+    }
+
     return {
       id: u.sub,
       email: u.email,
@@ -33,14 +84,7 @@ export class AuthController {
 
   /**
    * Desktop-only auto-login endpoint.
-   *
    * Issues a long-lived HS256 token for the single local user.
-   * Only available when LOCAL_JWT_SECRET is set (desktop/SQLite mode) —
-   * returns 403 in web/Postgres mode so it cannot be abused on a shared server.
-   *
-   * The Electron main process calls this right after the embedded backend
-   * boots, stores the token in the OS keychain, and injects it into the
-   * renderer via the IPC auth bridge. The user never sees a login screen.
    */
   @Post('desktop-token')
   @HttpCode(HttpStatus.OK)
@@ -58,9 +102,6 @@ export class AuthController {
       role: 'admin',
     };
 
-    // JwtModule is configured with Buffer.from(LOCAL_JWT_SECRET, 'hex') —
-    // same secret that JwtStrategy verifies against, so sign ↔ verify always agree.
-    // 1 year — effectively never expires for a local single-user app.
     const token = this.jwtService.sign(payload, { expiresIn: '365d' });
     const exp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
 

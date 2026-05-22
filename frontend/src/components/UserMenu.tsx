@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 
 /**
@@ -11,6 +12,7 @@ import { useAuthStore } from '@/store/auth';
  */
 export const UserMenu: React.FC = () => {
   const { t } = useTranslation('common');
+  const navigate = useNavigate();
   const { user, logout } = useAuthStore();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -66,6 +68,16 @@ export const UserMenu: React.FC = () => {
               )}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate('/profile');
+            }}
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700/60"
+          >
+            <User className="h-4 w-4" /> {t('profile', 'Perfil')}
+          </button>
           <button
             type="button"
             onClick={() => {

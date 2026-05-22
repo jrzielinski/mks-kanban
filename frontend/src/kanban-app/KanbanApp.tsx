@@ -29,6 +29,11 @@ const KanbanBoardPage = lazy(() =>
     default: (m as any).KanbanBoardPage ?? (m as any).default,
   })),
 );
+const ProfilePage = lazy(() =>
+  import('@/pages/ProfilePage').then((m) => ({
+    default: (m as any).ProfilePage ?? (m as any).default,
+  })),
+);
 
 const Spinner: React.FC = () => (
   <div className="flex h-screen items-center justify-center">
@@ -79,6 +84,10 @@ export const KanbanApp: React.FC = () => {
           <Route
             path="/kanban/:boardId"
             element={isAuthenticated ? <KanbanBoardPage /> : <Navigate to="/login" replace />}
+          />
+          <Route
+            path="/profile"
+            element={isAuthenticated ? <ProfilePage /> : <Navigate to="/login" replace />}
           />
           <Route path="/" element={<Navigate to={home} replace />} />
           <Route path="*" element={<Navigate to={home} replace />} />
