@@ -554,7 +554,13 @@ ipcMain.handle('agent:open-makestudio', () => {
     detached: true,
     stdio: 'ignore',
     cwd: appRoot,
-    env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined },
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: undefined,
+      // Force the makestudio product — the parent process sets MAKESTUDIO_PRODUCT=kanban
+      // which would leak and open another kanban window instead of the MakeStudio app.
+      MAKESTUDIO_PRODUCT: 'makestudio',
+    },
   });
   child.unref();
   // eslint-disable-next-line no-console
