@@ -1,0 +1,191 @@
+@import './tokens.css';
+
+@import '@fontsource-variable/inter/index.css';
+@import '@fontsource-variable/fraunces/opsz.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+@font-face {
+  font-family: 'Star Jedi';
+  src: url('./fonts/Starjedi.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Star Jedi Special';
+  src: url('./fonts/StarjediSpecialEdition.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #app {
+    zoom: var(--ui-scale, 1);
+  }
+
+
+  body {
+    background: var(--color-surface-0);
+    color: var(--color-text);
+    font-family: 'Inter Variable', 'Inter', 'SF Pro Text', 'Segoe UI',
+      system-ui, sans-serif;
+    font-feature-settings:
+      'cv02' 1, 'cv03' 1, 'cv04' 1, 'cv11' 1, 'ss01' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Default to text-selectable: every chat bubble, tool output, error
+       message, etc. must be copy/paste-able. The previous "user-select:
+       none" globally was a desktop-feels-native gesture — but it bled into
+       the chat content (which renders as <div>, not <p>/<span>) and made
+       half the UI un-copyable. Buttons stay non-selectable via the
+       explicit rule below; everything else is fair game. */
+    user-select: text;
+    overflow: hidden;
+    letter-spacing: -0.003em;
+  }
+
+  /* Block selection on interactive chrome where it would just be visual
+     noise (rapid double-clicks shouldn't paint a selection on a button
+     label). Add `select-none` Tailwind utility or this selector to opt
+     specific elements out — but DO NOT re-disable selection on the body. */
+  button, [role='button'], [role='menuitem'], [role='tab'] {
+    user-select: none;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-soft);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-dim);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+/* Route transition */
+.route-in {
+  animation: routeIn 0.22s ease-out both;
+}
+@keyframes routeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Serif heading */
+.font-serif {
+  font-family: 'Fraunces Variable', 'Fraunces', 'Charter', 'Georgia', serif;
+  font-variation-settings: 'opsz' 144, 'SOFT' 60;
+  font-weight: 400;
+  letter-spacing: -0.015em;
+}
+
+/* ─── Star Wars theme typography overrides ────────────────────────────
+ * Scoped under [data-theme="starwars"] so other themes are untouched.
+ * Logo-style Starjedi for big hero titles (.font-serif), Starjedi Special
+ * (more readable lower-case) for h1/h2/h3 in page headers and section
+ * labels. Body, inputs and code stay in Inter / JetBrains Mono — Star
+ * Jedi is decorative and ruins readability at body sizes. */
+[data-theme="starwars"] .font-serif,
+[data-theme="starwars"] h1,
+[data-theme="starwars"] h2,
+[data-theme="starwars"] h3 {
+  font-family: 'Trebuchet MS', 'News Cycle', 'Helvetica Neue', 'Inter Variable', sans-serif;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  font-variation-settings: normal;
+  letter-spacing: 0.06em;
+}
+[data-theme="starwars"] .font-mono,
+[data-theme="starwars"] code,
+[data-theme="starwars"] pre,
+[data-theme="starwars"] kbd,
+[data-theme="starwars"] input,
+[data-theme="starwars"] textarea,
+[data-theme="starwars"] select,
+[data-theme="starwars"] [contenteditable='true'] {
+  font-family: 'JetBrains Mono', 'SF Mono', Menlo, 'Courier New', monospace;
+  letter-spacing: 0;
+}
+[data-theme="starwars"] body {
+  font-family: 'Inter Variable', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.003em;
+}
+
+/* highlight.js (github-dark) — deixar o wrapper controlar o background
+   via --color-code-bg pra respeitar o tema ativo (em especial "claro"). */
+.md-body .hljs {
+  background: transparent !important;
+  padding: 0 !important;
+  color: var(--color-text-soft);
+}
+
+/* ─── UI Scale slider ──────────────────────────────────────────────── */
+.ui-scale-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+}
+.ui-scale-slider:focus { outline: none; }
+.ui-scale-slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      to right,
+      var(--color-primary) 0%,
+      var(--color-primary) var(--ui-scale-pct, 50%),
+      var(--color-surface-3) var(--ui-scale-pct, 50%),
+      var(--color-surface-3) 100%
+    );
+}
+.ui-scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: 2px solid var(--color-surface-0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.ui-scale-slider:hover::-webkit-slider-thumb { transform: scale(1.12); }
+.ui-scale-slider:active::-webkit-slider-thumb { transform: scale(1.05); }
+.ui-scale-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 0 0 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+}

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "declaration": false,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["renderer/*"],
+      "@shared/*": ["src/repl/ipc/*"],
+      "@agent/*": ["src/repl/*"]
+    }
+  },
+  "include": [
+    "main.ts",
+    "preload.ts",
+    "products/**/*.ts",
+    "shell/**/*.ts",
+    "src/repl/ipc/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.cjs",
+    "renderer"
+  ]
+}

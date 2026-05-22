@@ -1,0 +1,299 @@
+/**
+ * Design tokens — temas múltiplos via [data-theme="X"] no <html>.
+ * Default (sem attr) = "Padrão" MakeStudio (cinza neutro + laranja+azul).
+ * Demais temas via data-theme: claro | sombrero | slacker | comunal | maple | vidraca
+ */
+
+:root {
+  /* ── Brand — MakeStudio identity (laranja + azul) ────────────────── */
+  --color-primary: #E85D27;        /* MakeStudio orange */
+  --color-primary-soft: #FF8A5C;
+  --color-secondary: #2E7DD7;      /* MakeStudio blue */
+  --color-secondary-soft: #5BA3F0;
+  --color-tertiary: #6B4FB8;       /* MakeStudio purple */
+  --color-accent: #FFD93D;         /* Lightbulb yellow */
+
+  --color-success: #7FB069;
+  --color-warning: #E5B769;
+  --color-danger: #E06B6B;
+  --color-dim: #8A8A8A;
+  --color-dim-soft: #A8A8A8;
+  --color-text: #ECECEC;
+  --color-text-soft: #C8C8C8;
+  --color-code-bg: #2C2C2C;
+  --color-code-fg: #FF8A5C;
+  --color-input-border: #3A3A3A;
+
+  --color-surface-0: #212121;
+  --color-surface-1: #212121;
+  --color-surface-2: #2A2A2A;
+  --color-surface-3: #353535;
+  --color-border-subtle: #2A2A2A;
+  --color-border-soft: #3A3A3A;
+
+  --gradient-brand: linear-gradient(135deg, #E85D27 0%, #FF8A5C 100%);
+  --gradient-blue: linear-gradient(135deg, #2E7DD7 0%, #5BA3F0 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.03) inset,
+                 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+}
+
+/* ─── CLARO (light) ─────────────────────────────────────────────────── */
+[data-theme="claro"] {
+  --color-primary: #E85D27;
+  --color-primary-soft: #FF8A5C;
+  --color-secondary: #2E7DD7;
+  --color-secondary-soft: #5BA3F0;
+  --color-tertiary: #6B4FB8;
+  --color-accent: #F4B400;
+
+  --color-success: #1F9D55;
+  --color-warning: #C97A12;
+  --color-danger: #C92D2D;
+  --color-dim: #6E6E6E;
+  --color-dim-soft: #9A9A9A;
+  --color-text: #1A1A1A;
+  --color-text-soft: #4A4A4A;
+  --color-code-bg: #F2F2F2;
+  --color-code-fg: #C2410C;
+  --color-input-border: #D6D6D6;
+
+  --color-surface-0: #FFFFFF;
+  --color-surface-1: #FAFAFA;
+  --color-surface-2: #F0F0F0;
+  --color-surface-3: #E5E5E5;
+  --color-border-subtle: #E8E8E8;
+  --color-border-soft: #D0D0D0;
+
+  --gradient-brand: linear-gradient(135deg, #E85D27 0%, #FF8A5C 100%);
+  --gradient-blue: linear-gradient(135deg, #2E7DD7 0%, #5BA3F0 100%);
+
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.02) inset,
+                 0 4px 14px -8px rgba(0, 0, 0, 0.12);
+  --shadow-elev: 0 1px 0 rgba(0, 0, 0, 0.03) inset,
+                 0 16px 40px -20px rgba(0, 0, 0, 0.18);
+}
+
+/* ─── SOMBRERO (≈ Fedora) — deep navy + crimson + Fedora blue ─────── */
+[data-theme="sombrero"] {
+  --color-primary: #E33A6E;
+  --color-primary-soft: #F26395;
+  --color-secondary: #3C6EB4;
+  --color-secondary-soft: #5B8FD6;
+  --color-tertiary: #79DFE0;
+  --color-accent: #FFD93D;
+
+  --color-success: #5FA85F;
+  --color-warning: #E5B769;
+  --color-danger: #FF6B6B;
+  --color-dim: #7A8AA8;
+  --color-dim-soft: #9AAAC8;
+  --color-text: #ECECEC;
+  --color-text-soft: #B8C5DC;
+  --color-code-bg: #243558;
+  --color-code-fg: #F26395;
+  --color-input-border: #2E4470;
+
+  --color-surface-0: #1A2740;
+  --color-surface-1: #1A2740;
+  --color-surface-2: #243558;
+  --color-surface-3: #2E4470;
+  --color-border-subtle: #243558;
+  --color-border-soft: #2E4470;
+
+  --gradient-brand: linear-gradient(135deg, #E33A6E 0%, #F26395 100%);
+  --gradient-blue: linear-gradient(135deg, #3C6EB4 0%, #5B8FD6 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.7);
+}
+
+/* ─── SLACKER (≈ Slackware) — black + electric purple ──────────────── */
+[data-theme="slacker"] {
+  --color-primary: #B89BFF;
+  --color-primary-soft: #D4BCFF;
+  --color-secondary: #6B88B8;
+  --color-secondary-soft: #8FA9D0;
+  --color-tertiary: #FFD93D;
+  --color-accent: #FFD93D;
+
+  --color-success: #7FB069;
+  --color-warning: #E5B769;
+  --color-danger: #E06B6B;
+  --color-dim: #707070;
+  --color-dim-soft: #909090;
+  --color-text: #E5E5E5;
+  --color-text-soft: #B0B0B0;
+  --color-code-bg: #2A2A2A;
+  --color-code-fg: #B89BFF;
+  --color-input-border: #3F3F3F;
+
+  --color-surface-0: #1C1C1C;
+  --color-surface-1: #1C1C1C;
+  --color-surface-2: #2A2A2A;
+  --color-surface-3: #383838;
+  --color-border-subtle: #2A2A2A;
+  --color-border-soft: #3F3F3F;
+
+  --gradient-brand: linear-gradient(135deg, #B89BFF 0%, #D4BCFF 100%);
+  --gradient-blue: linear-gradient(135deg, #6B88B8 0%, #8FA9D0 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                 0 8px 24px -12px rgba(0, 0, 0, 0.55);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.65);
+}
+
+/* ─── COMUNAL (≈ Ubuntu) — aubergine + orange ──────────────────────── */
+[data-theme="comunal"] {
+  --color-primary: #E95420;
+  --color-primary-soft: #FF7A4A;
+  --color-secondary: #AEA79F;
+  --color-secondary-soft: #C7BFB6;
+  --color-tertiary: #77216F;
+  --color-accent: #FFB088;
+
+  --color-success: #5FA85F;
+  --color-warning: #E5B769;
+  --color-danger: #E06B6B;
+  --color-dim: #9A7E70;
+  --color-dim-soft: #B8998A;
+  --color-text: #F5E8DD;
+  --color-text-soft: #D4BFAE;
+  --color-code-bg: #3D0C2C;
+  --color-code-fg: #FFB088;
+  --color-input-border: #4D1B3D;
+
+  --color-surface-0: #2C001E;
+  --color-surface-1: #2C001E;
+  --color-surface-2: #3D0C2C;
+  --color-surface-3: #4D1B3D;
+  --color-border-subtle: #3D0C2C;
+  --color-border-soft: #4D1B3D;
+
+  --gradient-brand: linear-gradient(135deg, #E95420 0%, #FF7A4A 100%);
+  --gradient-blue: linear-gradient(135deg, #77216F 0%, #AEA79F 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                 0 8px 24px -12px rgba(0, 0, 0, 0.55);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.65);
+}
+
+/* ─── MAPLE (≈ macOS dark) — graphite + system blue ────────────────── */
+[data-theme="maple"] {
+  --color-primary: #0A84FF;
+  --color-primary-soft: #5AC8FA;
+  --color-secondary: #FF9F0A;
+  --color-secondary-soft: #FFCC0A;
+  --color-tertiary: #BF5AF2;
+  --color-accent: #FFD60A;
+
+  --color-success: #30D158;
+  --color-warning: #FFD60A;
+  --color-danger: #FF453A;
+  --color-dim: #8E8E93;
+  --color-dim-soft: #AEAEB2;
+  --color-text: #F5F5F7;
+  --color-text-soft: #C7C7CC;
+  --color-code-bg: #2C2C2E;
+  --color-code-fg: #FF9F0A;
+  --color-input-border: #48484A;
+
+  --color-surface-0: #1E1E1E;
+  --color-surface-1: #1E1E1E;
+  --color-surface-2: #2C2C2E;
+  --color-surface-3: #3A3A3C;
+  --color-border-subtle: #2C2C2E;
+  --color-border-soft: #48484A;
+
+  --gradient-brand: linear-gradient(135deg, #0A84FF 0%, #5AC8FA 100%);
+  --gradient-blue: linear-gradient(135deg, #5AC8FA 0%, #BF5AF2 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+                 0 4px 16px -8px rgba(0, 0, 0, 0.4);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.08) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.55);
+}
+
+/* ─── STAR WARS — deep space black + logo yellow + lightsaber blue ── */
+[data-theme="starwars"] {
+  --color-primary: #FFE81F;        /* Star Wars logo yellow */
+  --color-primary-soft: #FFF079;
+  --color-secondary: #3DCBFF;      /* Jedi lightsaber blue */
+  --color-secondary-soft: #88E1FF;
+  --color-tertiary: #C25BFF;       /* Mace Windu purple */
+  --color-accent: #FFE81F;
+
+  --color-success: #4FE08C;        /* Yoda saber green */
+  --color-warning: #FFB445;
+  --color-danger: #FF2A1C;         /* Sith saber red */
+  --color-dim: #6E7280;
+  --color-dim-soft: #8E929C;
+  --color-text: #E8EAF0;
+  --color-text-soft: #B6BAC4;
+  --color-code-bg: #11141B;
+  --color-code-fg: #FFE81F;
+  --color-input-border: #2A3040;
+
+  --color-surface-0: #050608;      /* deep space */
+  --color-surface-1: #0B0D12;
+  --color-surface-2: #14171F;
+  --color-surface-3: #1F2330;
+  --color-border-subtle: #14171F;
+  --color-border-soft: #2A3040;
+
+  --gradient-brand: linear-gradient(135deg, #FFE81F 0%, #FFB445 100%);
+  --gradient-blue: linear-gradient(135deg, #3DCBFF 0%, #88E1FF 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 232, 31, 0.06) inset,
+                 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+  --shadow-elev: 0 1px 0 rgba(255, 232, 31, 0.08) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.85);
+}
+
+/* ─── VIDRAÇA (≈ Windows 11 dark) — graphite + accent cyan ─────────── */
+[data-theme="vidraca"] {
+  --color-primary: #4CC2FF;
+  --color-primary-soft: #7CD4FF;
+  --color-secondary: #92C5F9;
+  --color-secondary-soft: #BBDFFF;
+  --color-tertiary: #C586EF;
+  --color-accent: #FFC700;
+
+  --color-success: #6CCB5F;
+  --color-warning: #F2C94C;
+  --color-danger: #FF6B6B;
+  --color-dim: #8B8B8B;
+  --color-dim-soft: #ADADAD;
+  --color-text: #FFFFFF;
+  --color-text-soft: #C8C8C8;
+  --color-code-bg: #2D2D2D;
+  --color-code-fg: #4CC2FF;
+  --color-input-border: #3A3A3A;
+
+  --color-surface-0: #1F1F1F;
+  --color-surface-1: #1F1F1F;
+  --color-surface-2: #2D2D2D;
+  --color-surface-3: #3A3A3A;
+  --color-border-subtle: #2D2D2D;
+  --color-border-soft: #3A3A3A;
+
+  --gradient-brand: linear-gradient(135deg, #4CC2FF 0%, #7CD4FF 100%);
+  --gradient-blue: linear-gradient(135deg, #92C5F9 0%, #BBDFFF 100%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.05) inset,
+                 0 6px 20px -10px rgba(0, 0, 0, 0.5);
+  --shadow-elev: 0 1px 0 rgba(255, 255, 255, 0.06) inset,
+                 0 20px 50px -20px rgba(0, 0, 0, 0.6);
+}
