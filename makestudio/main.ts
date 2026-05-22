@@ -60,6 +60,17 @@
   }
 }
 
+// ── 1b. Set unique app identity BEFORE products/makestudio/main loads ──
+// app.requestSingleInstanceLock() uses userData path (which includes app
+// name) as the lock key. If the kanban is already running (it sets
+// 'MakeStudio Kanban'), and we don't set our own name first, both apps
+// end up fighting for the same lock — makestudio loses and quits instantly.
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { app } = require('electron') as typeof import('electron');
+  app.setName('MakeStudio Code');
+}
+
 // ── 2. Register tsx/cjs ────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require('tsx/cjs');
