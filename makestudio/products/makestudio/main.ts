@@ -100,11 +100,10 @@ function agentRequire<T = any>(rel: string): T {
 }
 
 // ── Desktop-shell asset anchors ─────────────────────────────────────────
-// __dirname here at runtime = `<repo>/agent/desktop/dist/desktop/products/<product>/`.
-// preload.js lives 2 levels up (sibling of dist/desktop/main.js), the Vite
-// build output (`dist/renderer/index.html`) is 3 levels up. We pin these
-// anchors once instead of sprinkling `path.join(__dirname, '..', '..')`
-// across the file (and breaking again the next time the file moves).
+// __dirname here at runtime = `<mks-kanban>/makestudio/dist/products/<product>/`.
+// In the original gptapi, __dirname was `dist/desktop/products/<product>/` (3 levels
+// to dist/), but in our embedded setup it is only `dist/products/<product>/` (2 levels).
+// preload.js = dist/preload.js (2 levels up), renderer = dist/renderer/ (same level as preload).
 const DESKTOP_DIST_DIR = path.join(__dirname, '..', '..');
 const DESKTOP_SOURCE_DIR = path.join(AGENT_ROOT, 'desktop');
 
@@ -320,7 +319,8 @@ async function loadRendererInto(win: BrowserWindow): Promise<void> {
     await win.loadURL('http://localhost:3002');
     return;
   }
-  const indexPath = path.join(DESKTOP_DIST_DIR, '..', 'renderer', 'index.html');
+  // DESKTOP_DIST_DIR = dist/ → renderer is at dist/renderer/index.html (no extra ../)
+  const indexPath = path.join(DESKTOP_DIST_DIR, 'renderer', 'index.html');
   if (fs.existsSync(indexPath)) {
     await win.loadFile(indexPath);
     return;

@@ -519,36 +519,18 @@ ipcMain.handle('agent:open-window', () => {
 });
 
 /**
- * Launch the embedded MakeStudio Code Electron app.
- *
- * The app lives at `mks-kanban/makestudio/` — self-contained, no gptapi
- * installation required. Falls back to the gptapi installation if present.
- * Uses mks-kanban's own Electron binary (already compiled with node-pty).
+ * Launch the MakeStudio Code Electron app (embedded in mks-kanban/makestudio/).
+ * Completely self-contained — no external gptapi install needed.
  */
 ipcMain.handle('agent:open-makestudio', () => {
-  // mks-kanban/makestudio/dist/main.js — bundled copy (primary)
-  const bundledEntry = path.join(__dirname, '..', '..', 'makestudio', 'dist', 'main.js');
-  // gptapi external install — fallback for dev machines that have it
-  const home = app.getPath('home');
-  const externalEntry = path.join(home, 'gptapi', 'agent', 'desktop', 'dist', 'main.js');
-
-  const entry = fs.existsSync(bundledEntry) ? bundledEntry
-    : fs.existsSync(externalEntry) ? externalEntry
-    : null;
-
-  // Always use our own Electron binary — it's already compiled with node-pty
+  const entry    = path.join(__dirname, '..', '..', 'makestudio', 'dist', 'main.js');
   const electronBin = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron');
+  const appRoot  = path.join(__dirname, '..', '..', 'makestudio');
 
-  if (!entry || !fs.existsSync(electronBin)) {
-    dialog.showErrorBox(
-      'MakeStudio Code',
-      `App não encontrado.\n\nVerifique se o build foi feito:\n  cd makestudio && npm run build`,
-    );
+  if (!fs.existsSync(entry)) {
+    dialog.showErrorBox('MakeStudio Code', 'Build não encontrado. Rode:\n  cd makestudio && npm run build');
     return false;
   }
-
-  // The makestudio app needs its node_modules in scope — cwd to its root
-  const appRoot = path.join(path.dirname(entry), '..');
 
   const child = spawn(electronBin, ['--no-sandbox', entry], {
     detached: true,
@@ -557,14 +539,11 @@ ipcMain.handle('agent:open-makestudio', () => {
     env: {
       ...process.env,
       ELECTRON_RUN_AS_NODE: undefined,
-      // Force the makestudio product — the parent process sets MAKESTUDIO_PRODUCT=kanban
-      // which would leak and open another kanban window instead of the MakeStudio app.
       MAKESTUDIO_PRODUCT: 'makestudio',
     },
   });
   child.unref();
-  // eslint-disable-next-line no-console
-  console.log(`[product:kanban] launched MakeStudio Code (pid=${child.pid})`);
+  console.log(`[kanban] MakeStudio Code launched (pid=${child.pid})`);
   return true;
 });
 

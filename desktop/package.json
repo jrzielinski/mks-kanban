@@ -11,7 +11,6 @@
     "build": "npm run build:renderer && npm run build:backend && npm run build:main && npm run build:makestudio && npm run rebuild:native",
     "build:makestudio": "npm run build --prefix ../makestudio",
     "rebuild:native": "electron-rebuild && electron-rebuild --module-dir ../backend && electron-rebuild --module-dir ../makestudio",
-    "rebuild:gptapi-pty": "cd ../../gptapi/agent/node_modules/node-pty && HOME=~/.electron-gyp node-gyp rebuild --target=28.3.3 --arch=x64 --dist-url=https://electronjs.org/headers || true",
     "rebuild:backend-native": "electron-rebuild --module-dir ../backend",
     "pack": "bash scripts/pack-kanban.sh",
     "pack:dir": "bash scripts/pack-kanban.sh && electron-builder --dir --config electron-builder.json",
