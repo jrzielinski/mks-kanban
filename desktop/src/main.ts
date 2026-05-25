@@ -519,16 +519,16 @@ ipcMain.handle('agent:open-window', () => {
 });
 
 /**
- * Launch the MakeStudio Code Electron app (embedded in mks-kanban/makestudio/).
+ * Launch the MakeStudio Code Electron app (mks-code submodule).
  * Completely self-contained — no external gptapi install needed.
  */
 ipcMain.handle('agent:open-makestudio', () => {
-  const entry    = path.join(__dirname, '..', '..', 'makestudio', 'dist', 'main.js');
+  const entry    = path.join(__dirname, '..', '..', 'mks-code', 'dist', 'main.js');
   const electronBin = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'electron');
-  const appRoot  = path.join(__dirname, '..', '..', 'makestudio');
+  const appRoot  = path.join(__dirname, '..', '..', 'mks-code');
 
   if (!fs.existsSync(entry)) {
-    dialog.showErrorBox('MakeStudio Code', 'Build não encontrado. Rode:\n  cd makestudio && npm run build');
+    dialog.showErrorBox('MakeStudio Code', 'Build não encontrado. Rode:\n  cd mks-code && npm run build');
     return false;
   }
 
