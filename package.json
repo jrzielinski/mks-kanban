@@ -4,7 +4,7 @@
   "private": true,
   "description": "MKS Kanban — standalone web + desktop. One process serves everything.",
   "scripts": {
-    "install:all": "npm --prefix backend install && npm --prefix frontend install && npm --prefix desktop install",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install && npm --prefix desktop install && npm --prefix mks-code install --legacy-peer-deps",
     "build:frontend": "npm --prefix frontend run build",
     "build:backend": "npm --prefix backend run build",
     "build": "npm run build:frontend && npm run build:backend",

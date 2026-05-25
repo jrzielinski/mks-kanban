@@ -519,8 +519,7 @@ ipcMain.handle('agent:open-window', () => {
 });
 
 /**
- * Launch the MakeStudio Code Electron app (mks-code submodule).
- * Completely self-contained — no external gptapi install needed.
+ * Launch the MakeStudio Code app (mks-code submodule).
  */
 ipcMain.handle('agent:open-makestudio', () => {
   const entry    = path.join(__dirname, '..', '..', 'mks-code', 'dist', 'main.js');
