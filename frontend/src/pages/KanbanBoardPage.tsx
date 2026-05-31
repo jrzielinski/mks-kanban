@@ -1687,30 +1687,48 @@ export const KanbanBoardPage: React.FC = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        {boardMembers.map((member) => (
+                        {boardMembers.map((member) => {
+                          // MakeStudio Bot is system-managed: its presence
+                          // is enforced by createBoard_helper + the
+                          // backend's updateBoard_helper re-injection
+                          // guard. Hide the role dropdown + Remover for
+                          // bot rows and render an immutable 'Bot' badge
+                          // in their place. Avatar shows 🤖 so the row is
+                          // visually distinct at a glance.
+                          const isBot = typeof member.id === 'string' && member.id.startsWith('makestudio-bot:');
+                          return (
                           <div key={member.id} className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-gray-700/50">
                             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white" style={{ background: member.avatarColor || '#579dff' }}>
-                              {member.name.slice(0, 2).toUpperCase()}
+                              {isBot ? '🤖' : member.name.slice(0, 2).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="truncate text-sm font-medium text-[#172b4d] dark:text-gray-100">{member.name}</p>
                             </div>
-                            <select
-                              value={member.role ?? 'member'}
-                              onChange={e => void updateMemberRole(member.id, e.target.value as 'member' | 'manager')}
-                              className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-[#44546f] outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
-                            >
-                              <option value="member">{t('kanbanBoardPage.members.roleOptions.member')}</option>
-                              <option value="manager">{t('kanbanBoardPage.members.roleOptions.manager')}</option>
-                            </select>
-                            <button
-                              onClick={() => void removeBoardMember(member.id)}
-                              className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
-                            >
-                              {t('kanbanBoardPage.members.removeButton')}
-                            </button>
+                            {isBot ? (
+                              <span className="rounded-full bg-[#22D3EE]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#0891B2] dark:text-[#22D3EE]">
+                                Bot
+                              </span>
+                            ) : (
+                              <>
+                                <select
+                                  value={member.role ?? 'member'}
+                                  onChange={e => void updateMemberRole(member.id, e.target.value as 'member' | 'manager')}
+                                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-[#44546f] outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                >
+                                  <option value="member">{t('kanbanBoardPage.members.roleOptions.member')}</option>
+                                  <option value="manager">{t('kanbanBoardPage.members.roleOptions.manager')}</option>
+                                </select>
+                                <button
+                                  onClick={() => void removeBoardMember(member.id)}
+                                  className="rounded-lg px-2 py-1 text-xs text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                                >
+                                  {t('kanbanBoardPage.members.removeButton')}
+                                </button>
+                              </>
+                            )}
                           </div>
-                        ))}
+                          );
+                        })}
                         {boardMembers.length === 0 && (
                           <p className="rounded-xl bg-slate-50 px-3 py-4 text-sm text-[#626f86] dark:bg-gray-700/50 dark:text-gray-400">{t('kanbanBoardPage.members.noMembers')}</p>
                         )}

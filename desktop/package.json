@@ -4,6 +4,26 @@
   "description": "MKS Kanban — Electron desktop app",
   "private": true,
   "main": "dist/main.js",
+  "exports": {
+    ".":               { "types": "./dist/main.d.ts",           "default": "./dist/main.js" },
+    "./authStore":     { "types": "./dist/authStore.d.ts",      "default": "./dist/authStore.js" },
+    "./backendProcess":{ "types": "./dist/backendProcess.d.ts", "default": "./dist/backendProcess.js" },
+    "./boardLibrary":  { "types": "./dist/boardLibrary.d.ts",   "default": "./dist/boardLibrary.js" },
+    "./desktopSecret": { "types": "./dist/desktopSecret.d.ts",  "default": "./dist/desktopSecret.js" },
+    "./preload":       { "default": "./dist/preload.js" },
+    "./updater":       { "types": "./dist/updater.d.ts",        "default": "./dist/updater.js" },
+    "./windowState":   { "types": "./dist/windowState.d.ts",    "default": "./dist/windowState.js" }
+  },
+  "typesVersions": {
+    "*": {
+      "authStore":      ["dist/authStore.d.ts"],
+      "backendProcess": ["dist/backendProcess.d.ts"],
+      "boardLibrary":   ["dist/boardLibrary.d.ts"],
+      "desktopSecret":  ["dist/desktopSecret.d.ts"],
+      "updater":        ["dist/updater.d.ts"],
+      "windowState":    ["dist/windowState.d.ts"]
+    }
+  },
   "scripts": {
     "build:main": "tsc -p tsconfig.json",
     "build:renderer": "npm run build --prefix ../frontend",
