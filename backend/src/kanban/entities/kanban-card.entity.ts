@@ -134,6 +134,9 @@ export class KanbanCardEntity {
   @Column({ name: 'max_hours', nullable: true, type: 'float' })
   maxHours: number | null;
 
+  @Column({ nullable: true })
+  externalRef: string | null;
+
   // C3: Linked cards
   @Column({ name: 'linked_card_ids', type: 'simple-json', default: '[]' })
   linkedCardIds: string[];

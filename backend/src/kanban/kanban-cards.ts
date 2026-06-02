@@ -3,6 +3,7 @@
  */
 import { KanbanService } from './kanban.service';
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import { KanbanChecklistGroup, KanbanChecklistItem } from './entities/kanban-card.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, ILike, In } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -840,3 +841,55 @@ targetListId must be the id of an existing list, or null to create in the same l
 
   return createdCards;
 }
+
+export async function addChecklistGroup_helper(
+  tenantId: string,
+  cardId: string,
+  title: string,
+  dataSource: DataSource,
+): Promise<KanbanChecklistGroup> {
+  const card = await dataSource.manager.findOne(KanbanCardEntity, {
+    where: { tenantId, id: cardId },
+  });
+  if (!card) throw new NotFoundException('Card not found');
+
+  const groups = card.checklists || [];
+  const newGroup: KanbanChecklistGroup = {
+    id: randomUUID(),
+    title,
+    items: [],
+  };
+  groups.push(newGroup);
+  await dataSource.manager.update(KanbanCardEntity, cardId, { checklists: groups });
+  return newGroup;
+}
+
+export async function updateChecklistItem_helper(
+  tenantId: string,
+  cardId: string,
+  groupId: string,
+  itemId: string,
+  data: { text?: string; done?: boolean },
+  dataSource: DataSource,
+): Promise<KanbanChecklistGroup> {
+  const card = await dataSource.manager.findOne(KanbanCardEntity, {
+    where: { tenantId, id: cardId },
+  });
+  if (!card) throw new NotFoundException('Card not found');
+
+  const groups = card.checklists || [];
+  const groupIndex = groups.findIndex((g: KanbanChecklistGroup) => g.id === groupId);
+  if (groupIndex === -1) throw new NotFoundException('Checklist group not found');
+
+  const group = groups[groupIndex];
+  const itemIndex = group.items?.findIndex((i: KanbanChecklistItem) => i.id === itemId) ?? -1;
+  if (itemIndex === -1) throw new NotFoundException('Checklist item not found');
+
+  if (data.text !== undefined) group.items[itemIndex].text = data.text;
+  if (data.done !== undefined) group.items[itemIndex].done = data.done;
+
+  groups[groupIndex] = group;
+  await dataSource.manager.update(KanbanCardEntity, cardId, { checklists: groups });
+  return group;
+}
+

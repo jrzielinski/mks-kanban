@@ -15,6 +15,7 @@ import {
   CreateCardDto, UpdateCardDto, MoveCardDto, MoveCardToBoardDto, CreateActivityDto, UpdateActivityDto,
   CreateWorkspaceDto, UpdateWorkspaceDto, CreatePowerUpDto, UpdatePowerUpDto, AdvancedSearchDto,
   CreateTimeLogDto, UpdateTimeLogDto, CreateHourRequestDto, InviteByEmailDto,
+  AddChecklistGroupDto, UpdateChecklistItemDto,
 } from './dto/kanban.dto';
 
 @ApiTags('Kanban')
@@ -276,6 +277,52 @@ export class KanbanController {
   @ApiOperation({ summary: 'Restore archived card' })
   async restoreCard(@Param('cardId') cardId: string, @Req() req: any) {
     return this.kanban.restoreCard(this.tenant(req), cardId);
+  }
+
+  // ── SYNC ENDPOINTS ─────────────────────────────────────────────────────
+
+  @Get('cards')
+  @ApiOperation({ summary: 'List cards filtered by modifiedSince (sync)' })
+  async getCardsModifiedSince(
+    @Query('boardId') boardId: string,
+    @Query('modifiedSince') modifiedSince: string,
+    @Req() req: any,
+  ) {
+    if (modifiedSince) {
+      return await this.kanban.getCardsModifiedSince(this.tenant(req), modifiedSince);
+    }
+    return [];
+  }
+
+  @Post('cards/:cardId/checklist')
+  @ApiOperation({ summary: 'Add a checklist group to a card (sync)' })
+  async addChecklistGroup(
+    @Param('cardId') cardId: string,
+    @Body() dto: AddChecklistGroupDto,
+    @Req() req: any,
+  ) {
+    return await this.kanban.addChecklistGroup(this.tenant(req), cardId, dto);
+  }
+
+  @Patch('cards/:cardId/checklist/:groupId/items/:itemId')
+  @ApiOperation({ summary: 'Update a checklist item (sync)' })
+  async updateChecklistItem(
+    @Param('cardId') cardId: string,
+    @Param('groupId') groupId: string,
+    @Param('itemId') itemId: string,
+    @Body() dto: UpdateChecklistItemDto,
+    @Req() req: any,
+  ) {
+    return await this.kanban.updateChecklistItem(this.tenant(req), cardId, groupId, itemId, dto);
+  }
+
+  @Get('boards/:boardId/sync-state')
+  @ApiOperation({ summary: 'Get board sync state for conflict resolution' })
+  async getBoardSyncState(
+    @Param('boardId') boardId: string,
+    @Req() req: any,
+  ) {
+    return await this.kanban.getBoardSyncState(this.tenant(req), boardId);
   }
 
   @Delete('cards/:cardId')

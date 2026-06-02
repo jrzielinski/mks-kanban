@@ -1,11 +1,11 @@
 // src/kanban/kanban.service.ts
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, ILike, In } from 'typeorm';
+import { Repository, DataSource, ILike, In, MoreThanOrEqual } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { KanbanBoardEntity, KanbanBoardMember } from './entities/kanban-board.entity';
 import { KanbanListEntity } from './entities/kanban-list.entity';
-import { KanbanCardEntity } from './entities/kanban-card.entity';
+import { KanbanCardEntity, KanbanChecklistGroup } from './entities/kanban-card.entity';
 import { KanbanCardActivityEntity, ActivityType } from './entities/kanban-card-activity.entity';
 import { KanbanNotificationEntity } from './entities/kanban-notification.entity';
 import { KanbanWorkspaceEntity } from './entities/kanban-workspace.entity';
@@ -21,6 +21,7 @@ import {
   CreateCardDto, UpdateCardDto, MoveCardDto, MoveCardToBoardDto, CreateActivityDto, UpdateActivityDto,
   CreateWorkspaceDto, UpdateWorkspaceDto, CreatePowerUpDto, UpdatePowerUpDto, AdvancedSearchDto,
   CreateTimeLogDto, UpdateTimeLogDto, CreateHourRequestDto,
+  AddChecklistGroupDto, UpdateChecklistItemDto,
 } from './dto/kanban.dto';
 import { KanbanMailService } from './kanban-mail.service';
 import { KanbanGateway } from './kanban.gateway';
@@ -68,6 +69,8 @@ import {
   voiceFormat_helper,
   formatDescription_helper,
   decomposeCard_helper,
+  addChecklistGroup_helper,
+  updateChecklistItem_helper,
 } from './kanban-cards';
 
 import {
@@ -979,6 +982,46 @@ export class KanbanService {
   }> {
     return await parseButlerRule_helper(this, tenantId, boardId, text);
   }
+
+  async getCardsModifiedSince(tenantId: string, modifiedSince: string): Promise<KanbanCardEntity[]> {
+    const date = new Date(modifiedSince);
+    return await this.dataSource.manager.find(KanbanCardEntity, {
+      where: { tenantId, updatedAt: MoreThanOrEqual(date) },
+      order: { updatedAt: 'ASC' },
+    });
+  }
+
+  async addChecklistGroup(tenantId: string, cardId: string, dto: AddChecklistGroupDto): Promise<KanbanChecklistGroup> {
+    return await addChecklistGroup_helper(tenantId, cardId, dto.title, this.dataSource);
+  }
+
+  async updateChecklistItem(tenantId: string, cardId: string, groupId: string, itemId: string, dto: UpdateChecklistItemDto): Promise<KanbanChecklistGroup> {
+    return await updateChecklistItem_helper(tenantId, cardId, groupId, itemId, dto, this.dataSource);
+  }
+
+  async getBoardSyncState(tenantId: string, boardId: string): Promise<any> {
+    const board = await this.dataSource.manager.findOne(KanbanBoardEntity, {
+      where: { tenantId, id: boardId },
+    });
+    if (!board) throw new NotFoundException('Board not found');
+
+    const lists = await this.listRepo.find({ where: { tenantId, boardId } });
+    const listIds = lists.map((l: KanbanListEntity) => l.id);
+    const allCards = listIds.length > 0
+      ? await this.cardRepo.find({ where: { tenantId, listId: In(listIds) } })
+      : [];
+
+    const lastModified = allCards.length > 0
+      ? allCards.reduce((latest: Date, c: KanbanCardEntity) => c.updatedAt > latest ? c.updatedAt : latest, new Date(0))
+      : board.updatedAt;
+    return {
+      boardId: board.id,
+      boardVersion: board.updatedAt.toISOString(),
+      lastCardModifiedAt: lastModified.toISOString(),
+      totalCards: allCards.length,
+      totalLists: lists.length,
+    };
+  }
 }
 
 function validateWebhookUrl(url: string): void {
@@ -994,4 +1037,5 @@ function validateWebhookUrl(url: string): void {
       throw new Error('URL interna não permitida');
     }
   }
+
 }

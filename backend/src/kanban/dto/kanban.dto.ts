@@ -1,5 +1,5 @@
 // src/kanban/dto/kanban.dto.ts
-import { IsString, IsOptional, IsBoolean, IsInt, IsUUID, IsArray, IsDateString, IsIn, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsUUID, IsArray, IsDateString, IsIn, IsObject, IsNumber } from 'class-validator';
 import { KanbanBoardMember, KanbanBoardLabel, KanbanAutomationRule, KanbanCustomFieldDef } from '../entities/kanban-board.entity';
 import { KanbanAttachment, KanbanChecklistGroup, KanbanRecurrence, KanbanCardLocation } from '../entities/kanban-card.entity';
 import { KanbanPowerUpType } from '../entities/kanban-power-up.entity';
@@ -50,6 +50,8 @@ export class CreateCardDto {
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsInt() position?: number;
   @IsOptional() @IsDateString() dueDate?: string;
+  @IsOptional() @IsNumber() maxHours?: number;
+  @IsOptional() @IsString() externalRef?: string;
 }
 
 export class UpdateCardDto {
@@ -58,6 +60,8 @@ export class UpdateCardDto {
   @IsOptional() @IsArray() labels?: { text: string; color: string }[];
   @IsOptional() @IsArray() checklist?: { text: string; done: boolean }[];
   @IsOptional() @IsArray() checklists?: KanbanChecklistGroup[];
+  @IsOptional() @IsNumber() maxHours?: number;
+  @IsOptional() @IsString() externalRef?: string;
   @IsOptional() @IsArray() attachments?: KanbanAttachment[];
   @IsOptional() @IsArray() memberIds?: string[];
   @IsOptional() dueDate?: string | null;
@@ -142,6 +146,15 @@ export class CreateTimeLogDto {
   @IsOptional() @IsString() description?: string;
   @IsOptional() @IsString() loggedDate?: string;
   @IsOptional() @IsString() userName?: string;
+}
+
+export class AddChecklistGroupDto {
+  @IsString() title: string;
+}
+
+export class UpdateChecklistItemDto {
+  @IsOptional() @IsString() text?: string;
+  @IsOptional() @IsBoolean() done?: boolean;
 }
 
 export class UpdateTimeLogDto {
