@@ -32,6 +32,8 @@ export class CreateListDto {
   @IsString() title: string;
   @IsOptional() @IsString() color?: string;
   @IsOptional() @IsInt() position?: number;
+  /** Optional MakeStudio Bot role: implement | test | qa | review | deploy. */
+  @IsOptional() @IsString() agentRole?: string | null;
 }
 
 export class UpdateListDto {
@@ -39,6 +41,9 @@ export class UpdateListDto {
   @IsOptional() @IsString() color?: string;
   @IsOptional() @IsBoolean() isArchived?: boolean;
   @IsOptional() @IsInt() wipLimit?: number;
+  /** Optional MakeStudio Bot role: implement | test | qa | review | deploy.
+   *  Set to null to clear (column becomes human-only). */
+  @IsOptional() @IsString() agentRole?: string | null;
 }
 
 export class ReorderListsDto {

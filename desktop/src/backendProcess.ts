@@ -192,3 +192,15 @@ export function getActivePath(): string | null {
 export function getBootstrapToken(): string | null {
   return __bootstrapToken;
 }
+
+/**
+ * Returns the live ChildProcess of the embedded backend, or null if
+ * not started. Embedders (e.g. mks-code) use this to attach IPC
+ * handlers — for example, to bridge `process.send` from the backend
+ * back into the parent's agent-core (see mks-code/src/agent-bridge).
+ */
+export function getChild(): ChildProcess | null {
+  return child;
+}
+// getAdminCredentials() (seeded-admin) intencionalmente NÃO portado: este
+// branch migrou pra auth via JWKS/resource-server (sem seeded admin).

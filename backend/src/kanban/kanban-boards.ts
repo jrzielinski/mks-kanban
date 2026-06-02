@@ -32,14 +32,6 @@ import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
  * trails across boards, never collides between tenants, and matches
  * what `agent/src/repl/kanban-bot.ts` (the CLI side) emits.
  */
-function buildMakeStudioBotMember(tenantId: string): KanbanBoardMember {
-  return {
-    id: `makestudio-bot:${tenantId}`,
-    name: 'MakeStudio Bot',
-    avatarColor: '#22D3EE', // cyan — brand
-  };
-}
-
 export async function listBoards_helper(service: KanbanService, tenantId: string, userId?: string): Promise<(KanbanBoardEntity & { isStarred: boolean })[]> {
   const boards = await (service as any).boardRepo.find({
     where: { tenantId, isArchived: false, isTemplate: false },
@@ -53,6 +45,20 @@ export async function listBoards_helper(service: KanbanService, tenantId: string
 
 export async function listTemplates_helper(service: KanbanService, tenantId: string): Promise<KanbanBoardEntity[]> {
   return (service as any).boardRepo.find({ where: { tenantId, isTemplate: true, isArchived: false }, order: { createdAt: 'DESC' } });
+}
+
+/**
+ * Build the MakeStudio Bot member entry for this tenant. The id is
+ * stable + per-tenant so the bot shows up consistently in audit
+ * trails across boards, never collides between tenants, and matches
+ * what `agent/src/repl/kanban-bot.ts` (the CLI side) emits.
+ */
+function buildMakeStudioBotMember(tenantId: string): KanbanBoardMember {
+  return {
+    id: `makestudio-bot:${tenantId}`,
+    name: 'MakeStudio Bot',
+    avatarColor: '#22D3EE', // cyan — brand
+  };
 }
 
 // @ts-ignore

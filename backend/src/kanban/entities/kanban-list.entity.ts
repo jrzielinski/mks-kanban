@@ -26,6 +26,17 @@ export class KanbanListEntity {
   @Column({ name: 'wip_limit', type: 'int', default: 0 })
   wipLimit: number;
 
+  /**
+   * Optional role the MakeStudio Bot plays for cards in this list.
+   * Free-form varchar, conventionally one of:
+   *   implement | test | qa | review | deploy
+   * `null` means "no agent action — human-only column" and is the
+   * default for every existing list (zero migration impact for users
+   * who don't opt in).
+   */
+  @Column({ name: 'agent_role', nullable: true, type: 'varchar' })
+  agentRole: string | null;
+
   @Column({ name: 'tenant_id' })
   tenantId: string;
 
