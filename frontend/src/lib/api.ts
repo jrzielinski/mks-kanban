@@ -5,6 +5,14 @@ import identityApi from './identityApi'
 import { useAuthStore } from '@/store/auth'
 
 function getTenantIdFromDomain(): string {
+  // No embed (Electron/mks-code), TUDO roda sob o tenant "desktop" — o
+  // desktop-token emite tenantId "desktop" e os boards são criados assim.
+  // O hostname é localhost, que cairia em "staff" (regra web) → o backend
+  // filtraria por staff e o board (desktop) sumia → 404 / "Nenhum board".
+  // Quando o bridge do desktop existe, força "desktop".
+  if (typeof window !== 'undefined' && (window as { kanbanDesktop?: unknown }).kanbanDesktop) {
+    return 'desktop'
+  }
   const hostname = window.location.hostname
   const parts = hostname.split('.')
   const subdomain = parts[0]
