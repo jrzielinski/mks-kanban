@@ -41,7 +41,11 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = useAuthStore.getState().token
+    // Cai pro localStorage quando o store em memória ainda não foi semeado.
+    // No embed (Electron), o desktop-token é injetado no localStorage ANTES
+    // dos fetches, mas o seedAuth (que popula o store) é async — sem este
+    // fallback o 1º fetch sai sem token → 404 / "Nenhum board".
+    const token = useAuthStore.getState().token || localStorage.getItem('token')
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
