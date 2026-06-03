@@ -40,3 +40,7 @@ data/
 *.sqlite-*
 .makestudio/.setup-fired
 docs/plans/
+
+# Delivery Engine
+delivery/
+.wrapper-git-protocol
