@@ -1388,7 +1388,7 @@ export const CardDetailModal: React.FC<Props> = ({ card, listTitle, boardId, boa
     <div
       className={fullPage
         ? "relative w-full bg-white dark:bg-[#22272b]"
-        : "relative w-full max-w-[1160px] rounded-2xl sm:rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_90px_-40px_rgba(15,23,42,0.7)] dark:border-[#3b4754] dark:bg-[#22272b]"
+        : "relative w-full max-w-[1160px] overflow-hidden rounded-2xl sm:rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_90px_-40px_rgba(15,23,42,0.7)] dark:border-[#3b4754] dark:bg-[#22272b]"
       }
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
