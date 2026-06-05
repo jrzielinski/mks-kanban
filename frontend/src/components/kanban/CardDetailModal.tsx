@@ -2867,7 +2867,7 @@ export const CardDetailModal: React.FC<Props> = ({ card, listTitle, boardId, boa
             </div>
 
             {/* ── RIGHT: sidebar ── */}
-            <aside className="kanban-scroll w-full md:w-[236px] md:flex-shrink-0 border-t md:border-t-0 md:border-l border-[#e2e6ea] bg-[#f8fafc] px-4 pb-4 pt-12 md:pt-16 dark:border-[#3b4754] dark:bg-[#1b2024] md:overflow-y-auto md:max-h-[calc(100vh-80px)] md:sticky md:top-0 md:self-start">
+            <aside className="kanban-scroll w-full md:w-[236px] md:flex-shrink-0 border-t md:border-t-0 md:border-l border-[#e2e6ea] bg-[#f8fafc] px-4 pb-4 pt-11 md:pt-11 dark:border-[#3b4754] dark:bg-[#1b2024] md:overflow-y-auto md:max-h-[calc(100vh-44px)] md:sticky md:top-0 md:self-start">
               <div>
 
               {/* ── Time Tracking Metric Card ── */}
