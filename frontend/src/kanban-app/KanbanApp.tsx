@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/auth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
 import { useTheme } from '@/hooks/useTheme';
 import { useElectronAuthSync } from './useElectronAuthSync';
+import { useWebAuthSync } from './useWebAuthSync';
 import { useKanbanNotifications } from './useKanbanNotifications';
 import { useDeepLink } from './useDeepLink';
 import { UpdateBanner } from './UpdateBanner';
@@ -43,7 +44,11 @@ const Spinner: React.FC = () => (
 
 export const KanbanApp: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const { hydrated } = useElectronAuthSync();
+  const { hydrated: hydratedDesktop } = useElectronAuthSync();
+  const { hydrated: hydratedWeb } = useWebAuthSync();
+  // Render só libera quando AMBOS resolveram: keychain do Electron (desktop)
+  // e o handshake SSO do iframe (web). Em cada modo, o outro começa true.
+  const hydrated = hydratedDesktop && hydratedWeb;
   useAuthCheck();
   useTheme();
   useKanbanNotifications();

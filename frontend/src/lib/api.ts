@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import i18n from './i18n'
 import identityApi from './identityApi'
 import { useAuthStore } from '@/store/auth'
+import { isEmbedded, requestSsoFromParent } from '@/kanban-app/webSso'
 
 function getTenantIdFromDomain(): string {
   // No embed (Electron/mks-code), TUDO roda sob o tenant "desktop" — o
@@ -12,6 +13,15 @@ function getTenantIdFromDomain(): string {
   // Quando o bridge do desktop existe, força "desktop".
   if (typeof window !== 'undefined' && (window as { kanbanDesktop?: unknown }).kanbanDesktop) {
     return 'desktop'
+  }
+  // SSO via iframe (MakeStudio web): o tenant vem do token da conta (claim),
+  // salvo no seed. O hostname (kanban.*) cairia em 'kanban' e divergiria do
+  // escopo real dos boards do usuário.
+  try {
+    const ssoTenant = localStorage.getItem('mks-sso-tenant')
+    if (ssoTenant) return ssoTenant
+  } catch {
+    /* localStorage indisponível */
   }
   const hostname = window.location.hostname
   const parts = hostname.split('.')
@@ -89,6 +99,19 @@ api.interceptors.response.use(
     const skipToast = originalRequest?._skipToast || false
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // SSO embarcado (iframe MakeStudio): o token expirou. O refresh do
+      // kanban não serve (o token é da conta gptapi) — pedimos um token novo
+      // ao parent, que já o renova no fluxo dele, e refazemos a request.
+      if (isEmbedded()) {
+        originalRequest._retry = true
+        const ok = await requestSsoFromParent()
+        if (ok) {
+          const t = localStorage.getItem('token')
+          originalRequest.headers['Authorization'] = 'Bearer ' + t
+          return api(originalRequest)
+        }
+        // Parent não respondeu → cai pro fluxo normal abaixo.
+      }
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
