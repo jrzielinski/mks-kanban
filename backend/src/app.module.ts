@@ -84,13 +84,21 @@ const STATIC_MODULES: DynamicModule[] = (() => {
         // Web build — shared PostgreSQL, multi-user. Schema is owned by
         // migrations; they run on boot so a single-container deploy is
         // also zero-setup.
+        //
+        // DB_SYNCHRONIZE=true: standalone single-user deploy num banco PRÓPRIO
+        // e vazio — o schema é materializado das entities (igual ao modo
+        // desktop/sqlite). Nesse modo NÃO rodamos as migrations (a DropLocalUsers
+        // faz DROP ... CASCADE e só faz sentido quando o kanban dividia o banco
+        // do gptapi). Em deploy contra um banco gerido por migrations, deixe
+        // DB_SYNCHRONIZE off (default) → migrationsRun.
+        const sync = cfg.get('DB_SYNCHRONIZE') === 'true';
         return {
           type: 'postgres' as const,
           url: cfg.get<string>('DATABASE_URL'),
           entities,
-          synchronize: false,
+          synchronize: sync,
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
-          migrationsRun: true,
+          migrationsRun: !sync,
           logging,
         };
       },

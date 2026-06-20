@@ -42,13 +42,20 @@ echo "[kanban-deploy] 2/4 — docker build (frontend novo embarcado)"
 ssh "$HOST" "cd $REMOTE_DIR && docker build -t $IMAGE ."
 
 echo "[kanban-deploy] 3/4 — env (preserva atual + LOCAL_JWT_SECRET alinhado) + re-sobe"
-ssh "$HOST" "BACKEND_CONTAINER='$BACKEND_CONTAINER' CONTAINER='$CONTAINER' NETWORK='$NETWORK' IMAGE='$IMAGE' bash -s" <<'REMOTE'
+ssh "$HOST" "BACKEND_CONTAINER='$BACKEND_CONTAINER' CONTAINER='$CONTAINER' NETWORK='$NETWORK' IMAGE='$IMAGE' DB_SYNCHRONIZE='${DB_SYNCHRONIZE:-}' bash -s" <<'REMOTE'
 set -euo pipefail
 ENVFILE="$(mktemp)"; trap 'rm -f "$ENVFILE"' EXIT
-# Preserva o env do container atual (DATABASE_URL, JWT_SECRET, SEED_*, etc).
+# Preserva o env do container atual (DATABASE_URL, JWT_SECRET, SEED_*, DB_SYNCHRONIZE).
+# DB_SYNCHRONIZE entra na preservação → uma vez ligado, FICA ligado (single-user,
+# schema dono das entities). Senão um deploy futuro rodaria DropLocalUsers (CASCADE).
 docker inspect "$CONTAINER" --format '{{range .Config.Env}}{{println .}}{{end}}' \
-  | grep -E '^(JWT_SECRET|SEED_ADMIN_EMAIL|SEED_ADMIN_PASSWORD|NODE_ENV|PORT|DB_DRIVER|DATABASE_URL|FRONTEND_DIST)=' \
+  | grep -E '^(JWT_SECRET|SEED_ADMIN_EMAIL|SEED_ADMIN_PASSWORD|NODE_ENV|PORT|DB_DRIVER|DATABASE_URL|FRONTEND_DIST|DB_SYNCHRONIZE)=' \
   > "$ENVFILE"
+# Override explícito só se passado na invocação (DB_SYNCHRONIZE=true bash ...).
+if [ -n "${DB_SYNCHRONIZE:-}" ]; then
+  grep -v '^DB_SYNCHRONIZE=' "$ENVFILE" > "$ENVFILE.tmp" && mv "$ENVFILE.tmp" "$ENVFILE"
+  echo "DB_SYNCHRONIZE=$DB_SYNCHRONIZE" >> "$ENVFILE"
+fi
 # AUTH_JWT_SECRET do gptapi (lê /app/config/.env do container backend) -> hex
 # (chave HMAC compartilhada p/ SSO).
 AUTH="$(docker exec "$BACKEND_CONTAINER" cat /app/config/.env 2>/dev/null | grep -E '^AUTH_JWT_SECRET=' | head -1 | cut -d= -f2- | tr -d '\r' | sed -E 's/^"(.*)"$/\1/')"
