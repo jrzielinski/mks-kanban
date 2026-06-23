@@ -5,6 +5,7 @@ import { useAuthCheck } from '@/hooks/useAuthCheck';
 import { useTheme } from '@/hooks/useTheme';
 import { useElectronAuthSync } from './useElectronAuthSync';
 import { useWebAuthSync } from './useWebAuthSync';
+import { isEmbedded } from './webSso';
 import { useKanbanNotifications } from './useKanbanNotifications';
 import { useDeepLink } from './useDeepLink';
 import { UpdateBanner } from './UpdateBanner';
@@ -98,7 +99,10 @@ export const KanbanApp: React.FC = () => {
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>
       </Suspense>
-      <AgentTerminal />
+      {/* O launcher "MakeStudio Code" só faz sentido no app desktop (kanbanDesktop).
+          Embarcado no MakeStudio Code web ele é redundante (e o TUI só roda no
+          desktop), então some no iframe. */}
+      {!isEmbedded() && <AgentTerminal />}
     </>
   );
 };

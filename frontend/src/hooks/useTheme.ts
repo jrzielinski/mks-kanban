@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { isEmbedded, installEmbedThemeListener } from '../kanban-app/webSso';
 
 export type ThemeStyle = 'default' | 'macos' | 'windows' | 'ubuntu' | 'fedora' | 'suse' | 'makestudio';
 export type ThemeMode = 'light' | 'dark' | 'system';
@@ -82,6 +83,24 @@ export function useTheme() {
   const [mode, setModeState]   = useState<ThemeMode>('dark');
 
   useEffect(() => {
+    // Embarcado no MakeStudio Code (iframe): usa o style `makestudio` e SEGUE o
+    // modo do mks-code (claro/escuro), que chega via postMessage no SSO e é
+    // aplicado por applyEmbedTheme. Antes do sync chegar, parte do último modo
+    // sincronizado (ou `system`) — nunca dark forçado.
+    if (isEmbedded()) {
+      const embedMode = (localStorage.getItem('mks-embed-mode') as ThemeMode | null) ?? 'system';
+      setStyleState('makestudio');
+      setModeState(embedMode);
+      applyTheme('makestudio', embedMode);
+      // Pré-aplica os tokens da última sessão (instantâneo no reload); o SSO
+      // atualiza com os tokens atuais do mks-code logo em seguida.
+      try {
+        const tok = JSON.parse(localStorage.getItem('mks-embed-tokens') || '{}') as Record<string, string>;
+        for (const [k, v] of Object.entries(tok)) if (typeof v === 'string') document.documentElement.style.setProperty(k, v);
+      } catch { /* */ }
+      // Escuta trocas de tema ao vivo do mks-code (host re-envia ao mudar).
+      return installEmbedThemeListener();
+    }
     const saved = loadSaved();
     setStyleState(saved.style);
     setModeState(saved.mode);

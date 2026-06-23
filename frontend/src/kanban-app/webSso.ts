@@ -11,6 +11,49 @@ import { seedAuth, AuthSession } from './seedAuth';
  */
 export const SSO_READY = 'mks-kanban:sso-ready';
 export const SSO_SESSION = 'mks-kanban:sso-session';
+/** Atualização de tema AO VIVO (host re-envia quando o tema do mks-code muda). */
+export const SSO_THEME = 'mks-kanban:theme';
+
+/**
+ * Escuta atualizações de tema vindas do host DEPOIS do handshake (o usuário
+ * trocou o tema do mks-code com o kanban já aberto). Sem isto o tema ficava
+ * "parado" no de quando carregou. Persiste pela vida do app. Retorna o cleanup.
+ */
+export function installEmbedThemeListener(): () => void {
+  if (!isEmbedded()) return () => { /* */ };
+  const onMsg = (ev: MessageEvent): void => {
+    const data = ev.data as { type?: string; theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> } } | null;
+    if (!data) return;
+    if (data.type === SSO_THEME || data.type === SSO_SESSION) applyEmbedTheme(data.theme);
+  };
+  window.addEventListener('message', onMsg);
+  return () => window.removeEventListener('message', onMsg);
+}
+
+/**
+ * Aplica o tema do MakeStudio no kanban embarcado: style `makestudio` + o modo
+ * (claro/escuro) que o HOST enviou junto da sessão — seguindo o tema do mks-code,
+ * sem dark forçado. O iframe é outra origem e não enxerga o tema do parent, por
+ * isso vem por postMessage.
+ */
+export function applyEmbedTheme(theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> }): void {
+  try {
+    const root = document.documentElement;
+    root.classList.add('theme-makestudio');
+    const mode = theme?.mode;
+    if (mode === 'light') root.classList.remove('dark');
+    else if (mode === 'dark') root.classList.add('dark');
+    if (mode) localStorage.setItem('mks-embed-mode', mode);
+    // Tokens reais da paleta do mks-code → CSS vars que o theme-makestudio usa.
+    const t = theme?.tokens;
+    if (t) {
+      for (const [k, v] of Object.entries(t)) if (v) root.style.setProperty(k, v);
+      try { localStorage.setItem('mks-embed-tokens', JSON.stringify(t)); } catch { /* */ }
+    }
+  } catch {
+    /* localStorage/DOM indisponível */
+  }
+}
 
 /** Embarcado por iframe (web) e SEM o bridge Electron. */
 export function isEmbedded(): boolean {
@@ -53,8 +96,9 @@ export function requestSsoFromParent(timeoutMs = 4000): Promise<boolean> {
       resolve(ok);
     };
     const onMsg = (ev: MessageEvent): void => {
-      const data = ev.data as { type?: string; session?: AuthSession | null } | null;
+      const data = ev.data as { type?: string; session?: AuthSession | null; theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> } } | null;
       if (!data || data.type !== SSO_SESSION) return;
+      applyEmbedTheme(data.theme);
       finish(applySession(data.session ?? null));
     };
     window.addEventListener('message', onMsg);

@@ -590,30 +590,33 @@ html[class*="theme-"] .bg-violet-500 {
 
 /* ── MakeStudio Theme ─────────────────────────────────── */
 html.theme-makestudio {
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
+  /* Embarcado no MakeStudio Code: o host injeta --ms-* com os tokens da paleta
+     ATIVA do mks-code (claude/claro/vidraca…). Standalone: cai nos fallbacks. */
+  --accent: var(--ms-accent, #2563eb);
+  --accent-hover: var(--ms-accent-hover, #1d4ed8);
   --accent-light: rgba(37, 99, 235, 0.14);
   --card-radius: 12px;
 }
+html.theme-makestudio body { color: var(--ms-text, inherit); }
 
 /* MakeStudio Light */
-html.theme-makestudio:not(.dark) body { background-color: #f3f5f8 !important; }
-html.theme-makestudio:not(.dark) .bg-white { background-color: #FFFFFF !important; }
+html.theme-makestudio:not(.dark) body { background-color: var(--ms-bg, #f3f5f8) !important; }
+html.theme-makestudio:not(.dark) .bg-white { background-color: var(--ms-surface, #FFFFFF) !important; }
 html.theme-makestudio:not(.dark) .bg-gray-50,
-html.theme-makestudio:not(.dark) .bg-gray-100 { background-color: #edf2f7 !important; }
-html.theme-makestudio:not(.dark) .border-gray-200 { border-color: #d8e0ea !important; }
+html.theme-makestudio:not(.dark) .bg-gray-100 { background-color: var(--ms-surface-2, #edf2f7) !important; }
+html.theme-makestudio:not(.dark) .border-gray-200 { border-color: var(--ms-border, #d8e0ea) !important; }
 
 /* MakeStudio Dark */
-html.dark.theme-makestudio { --sidebar-bg: #0f172a; --window-bg: #111827; }
-html.dark.theme-makestudio body { background-color: #0b1220 !important; }
+html.dark.theme-makestudio { --sidebar-bg: var(--ms-bg, #0f172a); --window-bg: var(--ms-surface, #111827); }
+html.dark.theme-makestudio body { background-color: var(--ms-bg, #0b1220) !important; }
 html.dark.theme-makestudio .dark\:bg-dark-bg,
-html.dark.theme-makestudio .dark\:bg-gray-900 { background-color: #0b1220 !important; }
+html.dark.theme-makestudio .dark\:bg-gray-900 { background-color: var(--ms-bg, #0b1220) !important; }
 html.dark.theme-makestudio .dark\:bg-dark-card,
-html.dark.theme-makestudio .dark\:bg-gray-800 { background-color: #111827 !important; }
+html.dark.theme-makestudio .dark\:bg-gray-800 { background-color: var(--ms-surface, #111827) !important; }
 html.dark.theme-makestudio .dark\:border-dark-border,
-html.dark.theme-makestudio .dark\:border-gray-700 { border-color: #243244 !important; }
-html.dark.theme-makestudio .dark\:border-gray-600 { border-color: #2d3f55 !important; }
-html.dark.theme-makestudio .dark\:hover\:bg-gray-700:hover { background-color: #1a2840 !important; }
+html.dark.theme-makestudio .dark\:border-gray-700 { border-color: var(--ms-border, #243244) !important; }
+html.dark.theme-makestudio .dark\:border-gray-600 { border-color: var(--ms-border, #2d3f55) !important; }
+html.dark.theme-makestudio .dark\:hover\:bg-gray-700:hover { background-color: var(--ms-surface-2, #1a2840) !important; }
 
 /* MakeStudio — accent (ambos os modos) */
 html.theme-makestudio .btn-primary,
