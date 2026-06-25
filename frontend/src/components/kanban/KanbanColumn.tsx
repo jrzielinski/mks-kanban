@@ -585,7 +585,7 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
         {/* Cards area — scrollable */}
         <div
           ref={setDroppableNodeRef}
-          className={`flex min-h-[8px] flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2 pt-2 transition-colors duration-150 [scrollbar-color:#c8d0db_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#c8d0db] [&::-webkit-scrollbar-track]:bg-transparent dark:[scrollbar-color:#3d4b60_transparent] dark:[&::-webkit-scrollbar-thumb]:bg-[#3d4b60] ${
+          className={`flex min-h-[8px] flex-1 flex-col gap-2 overflow-y-auto px-2.5 pb-2 pt-2 transition-colors duration-150 [scrollbar-color:#94a3b8_transparent] [scrollbar-width:auto] [&::-webkit-scrollbar]:w-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#94a3b8] [&::-webkit-scrollbar-thumb:hover]:bg-[#64748b] [&::-webkit-scrollbar-track]:bg-transparent dark:[scrollbar-color:#64748b_transparent] dark:[&::-webkit-scrollbar-thumb]:bg-[#64748b] dark:[&::-webkit-scrollbar-thumb:hover]:bg-[#94a3b8] ${
             isOver ? 'bg-[#e5f0ff] dark:bg-[#1c2b41]' : ''
           }`}
         >

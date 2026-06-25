@@ -1,150 +1,91 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { isEmbedded, installEmbedThemeListener } from '../kanban-app/webSso';
 
-export type ThemeStyle = 'default' | 'macos' | 'windows' | 'ubuntu' | 'fedora' | 'suse' | 'makestudio';
-export type ThemeMode = 'light' | 'dark' | 'system';
+/**
+ * Tema do kanban = MESMA paleta do MakeStudio Code (mks-code). Cada tema é uma
+ * paleta `[data-theme="X"]` no <html> (definida em index.css, idêntica ao
+ * tokens.css do mks-code). NÃO há toggle claro/escuro à parte: o tema já é claro
+ * (claro/claude) ou escuro (resto) — quem decide é o próprio tema, via a classe
+ * `.dark` que ligamos para os temas escuros (ativa as variantes `dark:` do
+ * Tailwind, que a ponte do index.css remapeia pros tokens).
+ */
+export type ThemeName =
+  | 'padrao'
+  | 'claro'
+  | 'claude'
+  | 'sombrero'
+  | 'slacker'
+  | 'comunal'
+  | 'maple'
+  | 'vidraca'
+  | 'starwars';
 
-export const ALL_STYLES: ThemeStyle[] = ['default', 'macos', 'windows', 'ubuntu', 'fedora', 'suse', 'makestudio'];
-export const ALL_MODES: ThemeMode[] = ['light', 'dark', 'system'];
+/** Temas claros (texto escuro / superfícies claras). O restante é escuro. */
+export const LIGHT_THEMES: ReadonlySet<ThemeName> = new Set<ThemeName>(['claro', 'claude']);
 
+/** Ordem do ciclo Ctrl+Shift+T (standalone). starwars fica fora — easter egg. */
+export const CYCLE: ThemeName[] = [
+  'padrao', 'claro', 'claude', 'sombrero', 'slacker', 'comunal', 'maple', 'vidraca',
+];
+const ALL: ThemeName[] = [...CYCLE, 'starwars'];
 
-const STYLE_CLASS: Record<ThemeStyle, string | null> = {
-  default: null,
-  macos: 'theme-macos',
-  windows: 'theme-windows',
-  ubuntu: 'theme-ubuntu',
-  fedora: 'theme-fedora',
-  suse: 'theme-suse',
-  makestudio: 'theme-makestudio',
-};
+const STORAGE_KEY = 'makestudio:theme';
 
-const ALL_THEME_CLASSES = ['theme-macos', 'theme-windows', 'theme-ubuntu', 'theme-fedora', 'theme-suse', 'theme-makestudio'];
-
-// ── Backwards compat: migrate old single-key 'theme' to new two-key format ──
-const OLD_THEME_MAP: Record<string, { style: ThemeStyle; mode: ThemeMode }> = {
-  'light':         { style: 'default',    mode: 'light'  },
-  'dark':          { style: 'default',    mode: 'dark'   },
-  'system':        { style: 'default',    mode: 'system' },
-  'macos-light':   { style: 'macos',      mode: 'light'  },
-  'macos-dark':    { style: 'macos',      mode: 'dark'   },
-  'macos':         { style: 'macos',      mode: 'light'  },
-  'windows-light': { style: 'windows',    mode: 'light'  },
-  'windows-dark':  { style: 'windows',    mode: 'dark'   },
-  'windows':       { style: 'windows',    mode: 'light'  },
-  'ubuntu':        { style: 'ubuntu',     mode: 'dark'   },
-  'fedora':        { style: 'fedora',     mode: 'dark'   },
-  'suse':          { style: 'suse',       mode: 'dark'   },
-};
-
-function loadSaved(): { style: ThemeStyle; mode: ThemeMode } {
-  // New format
-  const savedStyle = localStorage.getItem('theme-style') as ThemeStyle | null;
-  const savedMode  = localStorage.getItem('theme-mode') as ThemeMode | null;
-  if (savedStyle && ALL_STYLES.includes(savedStyle) && savedMode && ALL_MODES.includes(savedMode)) {
-    return { style: savedStyle, mode: savedMode };
-  }
-
-  // Migrate from old single 'theme' key
-  const old = localStorage.getItem('theme');
-  if (old && OLD_THEME_MAP[old]) {
-    const migrated = OLD_THEME_MAP[old];
-    localStorage.removeItem('theme');
-    localStorage.setItem('theme-style', migrated.style);
-    localStorage.setItem('theme-mode', migrated.mode);
-    return migrated;
-  }
-
-  return { style: 'default', mode: 'dark' };
+/** Aplica um tema pelo NOME: data-theme no <html> + `.dark` p/ temas escuros. */
+export function applyThemeName(name: ThemeName): void {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (name === 'padrao') delete root.dataset.theme;
+  else root.dataset.theme = name;
+  root.classList.toggle('dark', !LIGHT_THEMES.has(name));
 }
 
-function applyTheme(style: ThemeStyle, mode: ThemeMode) {
-  const root = document.documentElement;
-
-  // Remove all theme classes
-  root.classList.remove('dark');
-  for (const cls of ALL_THEME_CLASSES) root.classList.remove(cls);
-
-  // Determine dark
-  let isDark = false;
-  if (mode === 'dark') {
-    isDark = true;
-  } else if (mode === 'system') {
-    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+function loadSaved(): ThemeName {
+  try {
+    const v = localStorage.getItem(STORAGE_KEY) as ThemeName | null;
+    if (v && ALL.includes(v)) return v;
+  } catch {
+    /* localStorage indisponível */
   }
-  if (isDark) root.classList.add('dark');
-
-  // Apply style class
-  const cls = STYLE_CLASS[style];
-  if (cls) root.classList.add(cls);
+  return 'padrao';
 }
 
 export function useTheme() {
-  const [style, setStyleState] = useState<ThemeStyle>('default');
-  const [mode, setModeState]   = useState<ThemeMode>('dark');
-
   useEffect(() => {
-    // Embarcado no MakeStudio Code (iframe): usa o style `makestudio` e SEGUE o
-    // modo do mks-code (claro/escuro), que chega via postMessage no SSO e é
-    // aplicado por applyEmbedTheme. Antes do sync chegar, parte do último modo
-    // sincronizado (ou `system`) — nunca dark forçado.
+    // Embarcado no MakeStudio Code: NÃO tem tema próprio — segue o tema do host,
+    // que chega no handshake SSO e via `mks-kanban:theme` ao vivo. Pré-aplica o
+    // último tema sincronizado (instantâneo no reload) ou 'claude' como default.
     if (isEmbedded()) {
-      const embedMode = (localStorage.getItem('mks-embed-mode') as ThemeMode | null) ?? 'system';
-      setStyleState('makestudio');
-      setModeState(embedMode);
-      applyTheme('makestudio', embedMode);
-      // Pré-aplica os tokens da última sessão (instantâneo no reload); o SSO
-      // atualiza com os tokens atuais do mks-code logo em seguida.
+      let cached: ThemeName | null = null;
       try {
-        const tok = JSON.parse(localStorage.getItem('mks-embed-tokens') || '{}') as Record<string, string>;
-        for (const [k, v] of Object.entries(tok)) if (typeof v === 'string') document.documentElement.style.setProperty(k, v);
-      } catch { /* */ }
-      // Escuta trocas de tema ao vivo do mks-code (host re-envia ao mudar).
+        const v = localStorage.getItem('mks-embed-theme') as ThemeName | null;
+        if (v && ALL.includes(v)) cached = v;
+      } catch {
+        /* */
+      }
+      applyThemeName(cached ?? 'claude');
       return installEmbedThemeListener();
     }
-    const saved = loadSaved();
-    setStyleState(saved.style);
-    setModeState(saved.mode);
-    applyTheme(saved.style, saved.mode);
+    // Standalone: tema salvo (ou padrão).
+    applyThemeName(loadSaved());
   }, []);
 
-  // React to system pref changes when mode === 'system'
+  // Ctrl+Shift+T cicla os temas (só standalone — embarcado segue o host).
   useEffect(() => {
-    if (mode !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const handler = () => applyTheme(style, 'system');
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, [style, mode]);
-
-  // Ctrl+Shift+T cycles through styles
-  useEffect(() => {
+    if (isEmbedded()) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'T') {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'T' || e.key === 't')) {
         e.preventDefault();
-        setStyleState((prev) => {
-          const idx = ALL_STYLES.indexOf(prev);
-          const next = ALL_STYLES[(idx + 1) % ALL_STYLES.length];
-          localStorage.setItem('theme-style', next);
-          applyTheme(next, mode);
-          return next;
-        });
+        const next = CYCLE[(CYCLE.indexOf(loadSaved()) + 1) % CYCLE.length];
+        applyThemeName(next);
+        try {
+          localStorage.setItem(STORAGE_KEY, next);
+        } catch {
+          /* */
+        }
       }
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [mode]);
-
-  const setStyle = (newStyle: ThemeStyle) => {
-    setStyleState(newStyle);
-    localStorage.setItem('theme-style', newStyle);
-    applyTheme(newStyle, mode);
-  };
-
-  const setMode = (newMode: ThemeMode) => {
-    setModeState(newMode);
-    localStorage.setItem('theme-mode', newMode);
-    applyTheme(style, newMode);
-  };
-
-  return { style, mode, setStyle, setMode };
+  }, []);
 }

@@ -2192,7 +2192,7 @@ export const KanbanBoardPage: React.FC = () => {
                 <BurndownView boardId={board?.id ?? ''} />
               </div>
             ) : (
-            <div className="h-full overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef3f8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-gray-700 dark:bg-gray-900 dark:[background-image:none]">
+            <div className="relative h-full overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[var(--color-surface-1)] shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] dark:border-gray-700">
               <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${bgColor} 0%, ${bgColor}cc 100%)` }} />
               <DndContext
                 sensors={sensors}
@@ -2203,7 +2203,7 @@ export const KanbanBoardPage: React.FC = () => {
               >
                 <div className="flex h-full min-w-max items-start gap-3.5 px-3.5 py-3.5">
                   {lists.length === 0 && !isReadOnly && (
-                    <div className="flex w-full items-center justify-center py-20">
+                    <div className="absolute inset-0 flex items-center justify-center p-6">
                       <div className="flex flex-col items-center gap-5 text-center max-w-sm">
                         <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
                           <KanbanIcon className="h-9 w-9 text-slate-400 dark:text-gray-500" />
@@ -2214,7 +2214,7 @@ export const KanbanBoardPage: React.FC = () => {
                         </div>
                         <button
                           onClick={() => setAddingList(true)}
-                          className="flex items-center gap-2 rounded-xl bg-[#0c66e4] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#0055cc] transition-colors shadow-sm"
+                          className="flex items-center gap-2 rounded-xl bg-[var(--color-primary)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[var(--color-primary-soft)] transition-colors shadow-sm"
                         >
                           <Plus className="h-4 w-4" /> {t('kanbanBoardPage.emptyBoard.createButton')}
                         </button>

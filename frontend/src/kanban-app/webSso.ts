@@ -14,6 +14,9 @@ export const SSO_SESSION = 'mks-kanban:sso-session';
 /** Atualização de tema AO VIVO (host re-envia quando o tema do mks-code muda). */
 export const SSO_THEME = 'mks-kanban:theme';
 
+/** Temas claros do mks-code (texto escuro). O restante carrega `.dark`. */
+const LIGHT_THEMES = new Set(['claro', 'claude']);
+
 /**
  * Escuta atualizações de tema vindas do host DEPOIS do handshake (o usuário
  * trocou o tema do mks-code com o kanban já aberto). Sem isto o tema ficava
@@ -22,7 +25,7 @@ export const SSO_THEME = 'mks-kanban:theme';
 export function installEmbedThemeListener(): () => void {
   if (!isEmbedded()) return () => { /* */ };
   const onMsg = (ev: MessageEvent): void => {
-    const data = ev.data as { type?: string; theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> } } | null;
+    const data = ev.data as { type?: string; theme?: { name?: string } } | null;
     if (!data) return;
     if (data.type === SSO_THEME || data.type === SSO_SESSION) applyEmbedTheme(data.theme);
   };
@@ -31,25 +34,24 @@ export function installEmbedThemeListener(): () => void {
 }
 
 /**
- * Aplica o tema do MakeStudio no kanban embarcado: style `makestudio` + o modo
- * (claro/escuro) que o HOST enviou junto da sessão — seguindo o tema do mks-code,
- * sem dark forçado. O iframe é outra origem e não enxerga o tema do parent, por
+ * Aplica o tema do MakeStudio no kanban embarcado pelo NOME do tema ativo no
+ * host (padrao/claro/claude/sombrero/...). Como o kanban tem as MESMAS paletas
+ * (index.css), só espelhamos o data-theme + `.dark`. O iframe é outra origem e
+ * não enxerga o tema do parent, por
  * isso vem por postMessage.
  */
-export function applyEmbedTheme(theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> }): void {
+export function applyEmbedTheme(theme?: { name?: string }): void {
   try {
+    const name = theme?.name;
+    if (!name) return;
     const root = document.documentElement;
-    root.classList.add('theme-makestudio');
-    const mode = theme?.mode;
-    if (mode === 'light') root.classList.remove('dark');
-    else if (mode === 'dark') root.classList.add('dark');
-    if (mode) localStorage.setItem('mks-embed-mode', mode);
-    // Tokens reais da paleta do mks-code → CSS vars que o theme-makestudio usa.
-    const t = theme?.tokens;
-    if (t) {
-      for (const [k, v] of Object.entries(t)) if (v) root.style.setProperty(k, v);
-      try { localStorage.setItem('mks-embed-tokens', JSON.stringify(t)); } catch { /* */ }
-    }
+    // O kanban tem as MESMAS paletas do mks-code (index.css). Basta espelhar o
+    // data-theme do host + ligar `.dark` p/ temas escuros — mesma paleta dos
+    // dois lados, sem injeção de token em runtime.
+    if (name === 'padrao') delete root.dataset.theme;
+    else root.dataset.theme = name;
+    root.classList.toggle('dark', !LIGHT_THEMES.has(name));
+    try { localStorage.setItem('mks-embed-theme', name); } catch { /* */ }
   } catch {
     /* localStorage/DOM indisponível */
   }
@@ -96,7 +98,7 @@ export function requestSsoFromParent(timeoutMs = 4000): Promise<boolean> {
       resolve(ok);
     };
     const onMsg = (ev: MessageEvent): void => {
-      const data = ev.data as { type?: string; session?: AuthSession | null; theme?: { mode?: 'dark' | 'light'; tokens?: Record<string, string> } } | null;
+      const data = ev.data as { type?: string; session?: AuthSession | null; theme?: { name?: string } } | null;
       if (!data || data.type !== SSO_SESSION) return;
       applyEmbedTheme(data.theme);
       finish(applySession(data.session ?? null));
