@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import kanbanService, { KanbanBoard, KanbanList } from '@/services/kanban.service';
 import { useConfirm } from '@/hooks/useConfirm';
 import { UserMenu } from '@/components/UserMenu';
+import { ThemeMenu } from '@/components/ThemeMenu';
 
 const BOARD_COLORS = [
   '#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444',
@@ -415,6 +416,7 @@ export const KanbanBoardsPage: React.FC = () => {
             >
               <Plus className="w-4 h-4" /> {t('kanbanBoardsPage.actions.newBoard')}
             </button>
+            <ThemeMenu />
             <div className="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
               <UserMenu />
             </div>
