@@ -2,7 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/auth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme, applyThemeName, type ThemeName } from '@/hooks/useTheme';
 import { useElectronAuthSync } from './useElectronAuthSync';
 import { useWebAuthSync } from './useWebAuthSync';
 import { isEmbedded } from './webSso';
@@ -52,6 +52,24 @@ export const KanbanApp: React.FC = () => {
   const hydrated = hydratedDesktop && hydratedWeb;
   useAuthCheck();
   useTheme();
+  // Pré-auth (login/register) SEMPRE no tema claude. Declarado DEPOIS do
+  // useTheme() de propósito: efeitos do MESMO componente rodam em ordem de
+  // declaração, então este vence o tema salvo. (Forçar dentro do Login não
+  // funciona: efeito de filho roda ANTES do efeito do pai no mount inicial,
+  // e o useTheme() daqui re-aplicava o tema escuro por cima.)
+  React.useEffect(() => {
+    if (isEmbedded()) return; // embarcado segue o tema do host
+    if (!isAuthenticated) {
+      applyThemeName('claude');
+    } else {
+      let saved: ThemeName = 'padrao';
+      try {
+        const v = localStorage.getItem('makestudio:theme') as ThemeName | null;
+        if (v) saved = v;
+      } catch { /* localStorage indisponível */ }
+      applyThemeName(saved);
+    }
+  }, [isAuthenticated]);
   useKanbanNotifications();
   useDeepLink();
 
@@ -102,7 +120,7 @@ export const KanbanApp: React.FC = () => {
       {/* O launcher "MakeStudio Code" só faz sentido no app desktop (kanbanDesktop).
           Embarcado no MakeStudio Code web ele é redundante (e o TUI só roda no
           desktop), então some no iframe. */}
-      {!isEmbedded() && <AgentTerminal />}
+      {isAuthenticated && !isEmbedded() && <AgentTerminal />}
     </>
   );
 };
