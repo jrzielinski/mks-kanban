@@ -91,9 +91,11 @@ export function requestSsoFromParent(timeoutMs = 4000): Promise<boolean> {
   if (!isEmbedded()) return Promise.resolve(false);
   return new Promise((resolve) => {
     let settled = false;
+    let iv = 0;
     const finish = (ok: boolean): void => {
       if (settled) return;
       settled = true;
+      if (iv) window.clearInterval(iv);
       window.removeEventListener('message', onMsg);
       resolve(ok);
     };
@@ -104,11 +106,16 @@ export function requestSsoFromParent(timeoutMs = 4000): Promise<boolean> {
       finish(applySession(data.session ?? null));
     };
     window.addEventListener('message', onMsg);
-    try {
-      window.parent.postMessage({ type: SSO_READY }, '*');
-    } catch {
-      /* sandbox */
-    }
+    // RETRY do `sso-ready`: postar uma vez só perde a corrida se o host ainda
+    // não registrou o listener (ele resolve a embedUrl via IPC async antes).
+    // Re-postamos a cada 300ms até a sessão chegar ou o timeout — o host
+    // responde no primeiro que pegar. (Também cobre o host que empurra no
+    // onLoad do iframe: qualquer um dos dois lados fecha o handshake.)
+    const ping = (): void => {
+      try { window.parent.postMessage({ type: SSO_READY }, '*'); } catch { /* sandbox */ }
+    };
+    ping();
+    iv = window.setInterval(ping, 300);
     window.setTimeout(() => finish(false), timeoutMs);
   });
 }
