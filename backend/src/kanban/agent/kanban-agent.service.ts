@@ -1,5 +1,5 @@
 // src/kanban/agent/kanban-agent.service.ts
-import { Injectable, Logger, NotFoundException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -12,6 +12,7 @@ import { KanbanBoardRepoEntity } from './entities/kanban-board-repo.entity';
 import { KanbanListAgentConfigEntity } from './entities/kanban-list-agent-config.entity';
 import { KanbanAgentExecutionEntity } from './entities/kanban-agent-execution.entity';
 import { AgentCoreService } from '../../agent-core/agent-core.service';
+import { KanbanAiBudgetService } from './services/kanban-ai-budget.service';
 import { EncryptionService } from '../../credentials/services/encryption.service';
 import { KanbanService } from '../kanban.service';
 import { KanbanCardEntity, KanbanAttachment } from '../entities/kanban-card.entity';
@@ -49,6 +50,7 @@ export class KanbanAgentService {
     @InjectRepository(KanbanCardEntity)
     private readonly cardRepo: Repository<KanbanCardEntity>,
     private readonly agentCoreService: AgentCoreService,
+    private readonly aiBudgetService: KanbanAiBudgetService,
     private readonly encryptionService: EncryptionService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => KanbanService))
@@ -119,6 +121,20 @@ export class KanbanAgentService {
     return { connected: count > 0, agentCount: count };
   }
 
+  // ── AI Budget (saldo pago + BYOK) ─────────────────────────────────
+
+  getAiBudgetStatus(tenantId: string): Promise<{ balanceUsd: number; byok: boolean }> {
+    return this.aiBudgetService.getStatus(tenantId);
+  }
+
+  setAiBudgetByok(tenantId: string, provider: string, apiKey: string): Promise<void> {
+    return this.aiBudgetService.setByok(tenantId, provider, apiKey);
+  }
+
+  clearAiBudgetByok(tenantId: string): Promise<void> {
+    return this.aiBudgetService.clearByok(tenantId);
+  }
+
   // ── Card Agent Context (public endpoint) ─────────────────────────
 
   async getCardAgentContext(
@@ -160,6 +176,11 @@ export class KanbanAgentService {
     userId: string,
     tenantId: string,
   ): Promise<{ execId: string }> {
+    // GATE — checa e reserva o saldo ANTES de qualquer trabalho (nem lookup do
+    // card). Sem free-tier de IA: sem saldo pago e sem BYOK, nega na hora.
+    const budget = await this.aiBudgetService.authorize(tenantId, dto.execType);
+    if (budget.allowed === false) throw new ForbiddenException(budget.reason);
+
     const card = await this.cardRepo.findOne({ where: { id: cardId, tenantId } });
     if (!card) throw new NotFoundException('Card not found');
 
@@ -310,6 +331,23 @@ export class KanbanAgentService {
     if (!card) return;
 
     const execType = (config.defaultExecType || 'analysis') as ExecType;
+
+    // GATE — mesma trava do disparo manual. Sem chamador HTTP aqui (é um
+    // evento), então em vez de lançar exceção registramos a execução como
+    // falha com uma atividade visível no card — o usuário vê POR QUE a
+    // automação não rodou, em vez de um silêncio sem explicação.
+    const budget = await this.aiBudgetService.authorize(tenantId, execType);
+    if (budget.allowed === false) {
+      this.logger.warn(`[KanbanAgent] Auto-trigger negado (sem saldo) card=${cardId} tenant=${tenantId}`);
+      await this.kanbanService.addActivity(
+        tenantId,
+        cardId,
+        'agent',
+        { text: `❌ ${budget.reason}`, type: 'comment', userName: 'MakeStudio Agent' } as CreateActivityDto,
+      ).catch(err => this.logger.warn(`[KanbanAgent] Falha ao postar aviso de saldo: ${err.message}`));
+      return;
+    }
+
     let repoContext: { repoUrl: string; repoBranch?: string; gitToken?: string } | undefined;
     let repoUrl: string | undefined;
 

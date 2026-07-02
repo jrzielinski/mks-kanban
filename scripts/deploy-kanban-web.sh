@@ -18,7 +18,7 @@
 #   backend_container (default zielinski-backend) — de onde lê AUTH_JWT_SECRET
 #                     (/app/config/.env, via docker exec)
 #
-# On-prem (amanhã): bash scripts/deploy-kanban-web.sh root@192.168.100.29 <backend_container>
+# On-prem (amanhã): bash scripts/deploy-kanban-web.sh root@192.168.100.7 <backend_container>
 set -euo pipefail
 
 HOST="${1:-root@zielinski.dev.br}"

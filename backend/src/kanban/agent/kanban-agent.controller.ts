@@ -26,6 +26,25 @@ export class KanbanAgentController {
     return this.kanbanAgentService.getAgentStatus(tenantId);
   }
 
+  // ── AI Budget (saldo pago + BYOK) ────────────────────────────────
+  // Sem free-tier: saldo nasce em 0. Sem saldo pago e sem BYOK, execução é
+  // negada em KanbanAgentService.executeCard / handleCardMoved.
+
+  @Get('kanban/agent/ai-budget')
+  getAiBudget(@Request() req: any) {
+    return this.kanbanAgentService.getAiBudgetStatus(requireTenantId(req));
+  }
+
+  @Post('kanban/agent/ai-budget/byok')
+  setAiBudgetByok(@Body() dto: { provider: string; apiKey: string }, @Request() req: any) {
+    return this.kanbanAgentService.setAiBudgetByok(requireTenantId(req), dto.provider, dto.apiKey);
+  }
+
+  @Delete('kanban/agent/ai-budget/byok')
+  clearAiBudgetByok(@Request() req: any) {
+    return this.kanbanAgentService.clearAiBudgetByok(requireTenantId(req));
+  }
+
   // ── Board Repos ──────────────────────────────────────────────────
 
   @Get('kanban/boards/:boardId/repos')

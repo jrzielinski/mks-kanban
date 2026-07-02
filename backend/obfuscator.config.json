@@ -1,0 +1,20 @@
+{
+  "compact": true,
+  "target": "node",
+  "controlFlowFlattening": false,
+  "deadCodeInjection": false,
+  "renameGlobals": false,
+  "renameProperties": false,
+  "identifierNamesGenerator": "mangled",
+  "stringArray": true,
+  "stringArrayEncoding": ["base64"],
+  "stringArrayThreshold": 0.75,
+  "stringArrayRotate": true,
+  "stringArrayShuffle": true,
+  "splitStrings": false,
+  "selfDefending": false,
+  "disableConsoleOutput": false,
+  "sourceMap": false,
+  "numbersToExpressions": false,
+  "simplify": true
+}

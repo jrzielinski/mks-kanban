@@ -1,0 +1,46 @@
+# ──────────────────────────────────────────────────────────────────────────
+# MKS Kanban — ON-PREM (OFUSCADO). Igual ao Dockerfile, mas o backend NestJS
+# compilado é OFUSCADO antes de virar imagem (proteção no box do cliente).
+# Config conservadora (backend/obfuscator.config.json): NÃO renomeia globals
+# nem properties → DI do Nest, nomes de entidade/tabela do TypeORM e campos do
+# class-validator ficam intactos; só mangla variáveis locais + esconde strings.
+# ──────────────────────────────────────────────────────────────────────────
+
+# Stage 1 — frontend build (vite já minifica o bundle servido)
+FROM node:20-alpine AS frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2 — backend build + OBFUSCATE
+FROM node:20-alpine AS backend
+WORKDIR /app/backend
+RUN apk add --no-cache python3 make g++
+COPY backend/package*.json ./
+RUN npm ci
+COPY backend/ ./
+RUN npm run build
+# Ofusca o dist/ compilado (config NestJS-safe). Output num dir novo e troca,
+# pra não obfuscar em cima do próprio input.
+RUN npm i -g javascript-obfuscator@4 \
+ && javascript-obfuscator dist --output dist-obf --config obfuscator.config.json \
+ && rm -rf dist && mv dist-obf dist
+
+# Stage 3 — runtime (só dist ofuscado + frontend bundle; zero .ts)
+FROM node:20-alpine
+WORKDIR /app
+RUN apk add --no-cache python3 make g++ && \
+    addgroup -S app && adduser -S -G app app
+COPY backend/package*.json ./
+RUN npm ci --omit=dev && apk del python3 make g++
+COPY --from=backend  /app/backend/dist  ./dist
+COPY --from=frontend /app/frontend/dist ./public
+USER app
+ENV NODE_ENV=production \
+    PORT=3100 \
+    DB_DRIVER=postgres \
+    FRONTEND_DIST=/app/public
+EXPOSE 3100
+CMD ["node", "dist/main"]
