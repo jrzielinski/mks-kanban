@@ -388,32 +388,32 @@ export const KanbanBoardsPage: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
       <div className="w-full">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <LayoutGrid className="w-7 h-7 text-blue-500" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('kanbanBoardsPage.labels.pageTitle')}</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide [&>*]:shrink-0">
             <button
               onClick={showDashboard ? () => setShowDashboard(false) : () => void loadDashboard()}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showDashboard ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'}`}
             >
-              <Gauge className="w-4 h-4" /> {t('kanbanBoardsPage.actions.dashboard')}
+              <Gauge className="w-4 h-4" /> <span className="hidden sm:inline">{t('kanbanBoardsPage.actions.dashboard')}</span>
             </button>
             <button
               onClick={() => setShowCreateWs(true)}
               className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors"
             >
-              <FolderOpen className="w-4 h-4" /> {t('kanbanBoardsPage.actions.newWorkspace')}
+              <FolderOpen className="w-4 h-4" /> <span className="hidden sm:inline">{t('kanbanBoardsPage.actions.newWorkspace')}</span>
             </button>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors"
             >
-              <Plus className="w-4 h-4" /> {t('kanbanBoardsPage.actions.newBoard')}
+              <Plus className="w-4 h-4" /> <span className="hidden sm:inline">{t('kanbanBoardsPage.actions.newBoard')}</span>
             </button>
             <div className="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
               <UserMenu />

@@ -19,6 +19,25 @@ const STYLE_CLASS: Record<ThemeStyle, string | null> = {
 
 const ALL_THEME_CLASSES = ['theme-macos', 'theme-windows', 'theme-ubuntu', 'theme-fedora', 'theme-suse', 'theme-makestudio'];
 
+// ── Host sync (embedded in MakeStudio) ──────────────────────────────────────
+// When running inside the MakeStudio iframe/BrowserView, the host posts its
+// active theme NAME (see KanbanEmbedPage.tsx → hostThemeName()) via
+// `mks-kanban:theme`. mks-code's theme names don't match ours 1:1, so we map
+// each to the closest {style, mode} pair — MakeStudio's own look ('padrao'/
+// 'claro') gets the dedicated 'makestudio' skin; the OS-inspired names
+// ('sombrero', 'comunal', 'maple', 'vidraca') map to their matching skin here.
+const HOST_THEME_MAP: Record<string, { style: ThemeStyle; mode: ThemeMode }> = {
+  padrao:   { style: 'makestudio', mode: 'dark'  },
+  claro:    { style: 'makestudio', mode: 'light' },
+  claude:   { style: 'default',    mode: 'light' },
+  sombrero: { style: 'fedora',     mode: 'dark'  },
+  comunal:  { style: 'ubuntu',     mode: 'dark'  },
+  maple:    { style: 'macos',      mode: 'dark'  },
+  vidraca:  { style: 'windows',    mode: 'dark'  },
+  slacker:  { style: 'default',    mode: 'dark'  },
+  starwars: { style: 'default',    mode: 'dark'  },
+};
+
 // ── Backwards compat: migrate old single-key 'theme' to new two-key format ──
 const OLD_THEME_MAP: Record<string, { style: ThemeStyle; mode: ThemeMode }> = {
   'light':         { style: 'default',    mode: 'light'  },
@@ -86,6 +105,24 @@ export function useTheme() {
     setStyleState(saved.style);
     setModeState(saved.mode);
     applyTheme(saved.style, saved.mode);
+  }, []);
+
+  // Host sync — only fires when embedded in MakeStudio (iframe posts its
+  // active theme name on mount + on every theme change). No-op standalone.
+  useEffect(() => {
+    const onMessage = (ev: MessageEvent): void => {
+      const data = ev.data as { type?: string; theme?: { name?: string } } | null;
+      if (data?.type !== 'mks-kanban:theme') return;
+      const mapped = HOST_THEME_MAP[data.theme?.name ?? ''];
+      if (!mapped) return;
+      setStyleState(mapped.style);
+      setModeState(mapped.mode);
+      localStorage.setItem('theme-style', mapped.style);
+      localStorage.setItem('theme-mode', mapped.mode);
+      applyTheme(mapped.style, mapped.mode);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   // React to system pref changes when mode === 'system'

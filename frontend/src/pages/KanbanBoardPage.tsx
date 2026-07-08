@@ -1495,7 +1495,7 @@ export const KanbanBoardPage: React.FC = () => {
                   {board?.title}
                 </h1>
               )}
-              <p className="text-[11px] text-slate-500 dark:text-gray-400">{t('kanbanBoardPage.subtitle')}</p>
+              <p className="hidden text-[11px] text-slate-500 dark:text-gray-400 sm:block">{t('kanbanBoardPage.subtitle')}</p>
             </div>
 
             {/* Search */}
@@ -1518,7 +1518,7 @@ export const KanbanBoardPage: React.FC = () => {
               )}
             </div>
 
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-hide [&>*]:shrink-0">
               {/* Grupo 1: Online user presence avatars */}
               {otherOnlineUsers.length > 0 && (() => {
                 const others = otherOnlineUsers;
@@ -1864,7 +1864,7 @@ export const KanbanBoardPage: React.FC = () => {
           </div>
         </div>}
 
-        {!focusMode && <div className="flex items-center gap-2 border-b border-slate-200/90 dark:border-gray-700 px-4 py-2">
+        {!focusMode && <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide border-b border-slate-200/90 dark:border-gray-700 px-4 py-2 [&>*]:shrink-0">
           {/* View mode tabs */}
           <div className="flex rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-gray-600/80 dark:bg-gray-700/60">
             <button onClick={() => setViewMode('board')} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'board' ? 'bg-white text-slate-900 shadow-sm dark:bg-gray-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-gray-400'}`}>
@@ -2174,7 +2174,7 @@ export const KanbanBoardPage: React.FC = () => {
                 <BurndownView boardId={board?.id ?? ''} />
               </div>
             ) : (
-            <div className="h-full overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef3f8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-gray-700 dark:bg-gray-900 dark:[background-image:none]">
+            <div className="h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef3f8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-gray-700 dark:bg-gray-900 dark:[background-image:none]">
               <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${bgColor} 0%, ${bgColor}cc 100%)` }} />
               <DndContext
                 sensors={sensors}
@@ -2252,7 +2252,7 @@ export const KanbanBoardPage: React.FC = () => {
                     </div>
                   )}
 
-                  {!isReadOnly && <div className="w-[282px] flex-shrink-0">
+                  {!isReadOnly && <div className="w-[85vw] max-w-[282px] flex-shrink-0 snap-start sm:w-[282px]">
                     {addingList ? (
                       <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.28)] dark:border-gray-600 dark:bg-gray-800">
                         <input
