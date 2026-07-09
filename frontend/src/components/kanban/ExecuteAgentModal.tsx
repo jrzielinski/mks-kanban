@@ -176,7 +176,7 @@ export const ExecuteAgentModal: React.FC<Props> = ({
               <div className="flex items-center gap-2">
                 <Wand2 className="h-4 w-4 text-[#0c66e4] dark:text-blue-300" />
                 <div>
-                  <div className="text-sm font-semibold text-[#172b4d] dark:text-white">{t('nodes.executeAgentModal.tsx.resumoDaExecucao')}</div>
+                  <div className="text-sm font-semibold text-[#172b4d] dark:text-white">Resumo da execução</div>
                   <p className="text-xs text-[#626f86] dark:text-gray-400">
                     Revise o contexto antes de disparar o agente.
                   </p>
@@ -226,7 +226,7 @@ export const ExecuteAgentModal: React.FC<Props> = ({
                 onChange={e => handleRepoChange(e.target.value)}
                 className="w-full rounded-xl border border-[#dcdfe4] bg-white px-3 py-2.5 text-sm text-[#172b4d] outline-none focus:border-[#579dff] dark:border-[#2e3541] dark:bg-[#1b2230] dark:text-white"
               >
-                <option value="">{t('nodes.executeAgentModal.tsx.semRepositorio')}</option>
+                <option value="">Sem repositório</option>
                 {repos.map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
@@ -277,7 +277,7 @@ export const ExecuteAgentModal: React.FC<Props> = ({
                 value={customPrompt}
                 onChange={e => setCustomPrompt(e.target.value)}
                 rows={5}
-                placeholder={t('nodes.executeAgentModal.tsx.descrevaComClarezaOQueOAgenteDeveFazerQuaisRestricoesSeguirEQualResultadoVoceEsperaReceber_placeholder')}
+                placeholder={"Descreva com clareza o que o agente deve fazer, quais restrições seguir e qual resultado você espera receber"}
                 className="mt-3 w-full resize-none rounded-xl border border-[#dcdfe4] bg-white px-3 py-2.5 text-sm text-[#172b4d] outline-none focus:border-[#579dff] dark:border-[#2e3541] dark:bg-[#1b2230] dark:text-white"
               />
             )}

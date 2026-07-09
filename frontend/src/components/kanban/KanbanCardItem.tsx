@@ -207,14 +207,14 @@ export const KanbanCardItem = memo(function KanbanCardItem({
         onMouseDown={e => e.stopPropagation()}
         onClick={openQuickEdit}
         className="absolute right-2 top-2 z-10 flex h-6 w-6 items-center justify-center rounded-md border border-slate-200/80 bg-white/95 text-[#44546f] opacity-0 shadow-sm transition-all group-hover:opacity-100 hover:border-[#bfd4ff] hover:bg-[#e9efff] hover:text-[#0c66e4] dark:border-gray-600 dark:bg-gray-700/90 dark:text-gray-400 dark:hover:bg-[#1c2b41] dark:hover:text-[#85b8ff]"
-        title={t('nodes.kanbanCardItem.tsx.edicaoRapida_title')}
+        title={"Edição rápida"}
       >
         <Pencil className="h-3 w-3" />
       </button>
 
       {editors && editors.length > 0 && (
         <div className="absolute right-2 top-2 z-10 flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shadow-sm dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-          title={t('nodes.kanbanCardItem.tsx.alguemEstaEditandoEsteCard_title')}>
+          title={"Alguém está editando este card"}>
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
@@ -417,7 +417,7 @@ export const KanbanCardItem = memo(function KanbanCardItem({
             onClick={e => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-xs font-semibold text-[#44546f] dark:text-gray-400">{t('nodes.kanbanCardItem.tsx.edicaoRapida')}</span>
+              <span className="text-xs font-semibold text-[#44546f] dark:text-gray-400">Edição rápida</span>
               <button
                 onClick={() => { setShowQuickEdit(false); setShowQuickTemplates(false); setQuickEditPos(null); }}
                 className="text-[#626f86] hover:text-[#172b4d] dark:text-gray-500"
@@ -495,7 +495,7 @@ export const KanbanCardItem = memo(function KanbanCardItem({
               className="mb-2 w-full rounded-lg border border-[#cfd3d8] bg-white px-2.5 py-1.5 text-sm text-[#172b4d] outline-none dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
             />
 
-            <p className="mb-1 text-[11px] font-semibold text-[#44546f] dark:text-gray-500">{t('nodes.kanbanCardItem.tsx.horasMax')}</p>
+            <p className="mb-1 text-[11px] font-semibold text-[#44546f] dark:text-gray-500">Horas máx.</p>
             <input
               type="number"
               min="0.5"

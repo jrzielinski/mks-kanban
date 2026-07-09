@@ -110,8 +110,105 @@ export const TimelineView: React.FC<Props> = ({
     return groups;
   }, [lists, rows]);
 
+  // Mobile agenda: same window/data as the desktop Gantt, but as a vertical
+  // list grouped by month — a day-grid Gantt doesn't translate to a phone
+  // screen, an agenda list is the mobile-native shape for "cards with dates".
+  const agendaGroups = useMemo(() => {
+    const sorted = [...rows].sort((a, b) => a.start - b.start);
+    const groups: { label: string; items: typeof rows }[] = [];
+    for (const r of sorted) {
+      const d = new Date(windowStart.getTime() + r.start * 86400000);
+      const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.items.push(r);
+      else groups.push({ label, items: [r] });
+    }
+    return groups;
+  }, [rows, windowStart]);
+
+  const fmtRange = (r: { start: number; end: number }): string => {
+    const s = new Date(windowStart.getTime() + r.start * 86400000);
+    const e = new Date(windowStart.getTime() + r.end * 86400000);
+    const opts: Intl.DateTimeFormatOptions = { day: '2-digit', month: '2-digit' };
+    return r.start === r.end ? s.toLocaleDateString('pt-BR', opts) : `${s.toLocaleDateString('pt-BR', opts)} – ${e.toLocaleDateString('pt-BR', opts)}`;
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* ── Mobile: vertical agenda list ─────────────────────────────── */}
+      <div className="flex h-full flex-col overflow-hidden sm:hidden">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-gray-700 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-[#626f86] dark:text-gray-400" />
+            <h2 className="text-sm font-semibold text-[#172b4d] dark:text-gray-100">Timeline</h2>
+          </div>
+          <span className="text-xs text-[#626f86] dark:text-gray-400">{rows.length} cards</span>
+        </div>
+
+        <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2 dark:border-gray-700 flex-shrink-0">
+          <button onClick={() => scrollBy(-2)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-gray-400">
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setWindowStart(() => { const d = new Date(today); d.setMonth(d.getMonth() - 1); d.setDate(1); return startOfDay(d); })}
+            className="flex flex-col items-center rounded-lg px-2 py-1 text-center hover:bg-slate-100 dark:hover:bg-gray-700"
+          >
+            <span className="text-xs font-semibold text-[#0c66e4] dark:text-[#579dff]">Hoje</span>
+            <span className="text-[11px] text-[#626f86] dark:text-gray-400 whitespace-nowrap">
+              {windowStart.toLocaleDateString('pt-BR', { month: 'short' })} – {windowEnd.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+            </span>
+          </button>
+          <button onClick={() => scrollBy(2)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-gray-400">
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {!hasSomeCardsWithDates ? (
+            <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
+              <Clock className="mb-2 h-8 w-8 opacity-40" />
+              <p className="text-sm font-medium">Nenhum card com prazo definido</p>
+              <p className="mt-1 px-8 text-center text-xs">Defina datas nos cards para vê-los na timeline</p>
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
+              <Clock className="mb-2 h-8 w-8 opacity-40" />
+              <p className="text-sm font-medium">Nenhum card com prazo neste período</p>
+              <p className="mt-1 px-8 text-center text-xs">Navegue para outros meses para ver os demais cards</p>
+            </div>
+          ) : (
+            agendaGroups.map((group) => (
+              <div key={group.label}>
+                <div className="sticky top-0 z-10 bg-[#f3f5f8] px-4 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#626f86] dark:bg-gray-900/80 dark:text-gray-400">
+                  {group.label}
+                </div>
+                {group.items.map((r) => {
+                  const isOverdue = r.card.dueDate && new Date(r.card.dueDate) < today;
+                  return (
+                    <button
+                      key={r.card.id}
+                      onClick={() => onCardClick(r.card)}
+                      className="flex w-full items-center gap-3 border-b border-slate-100 px-4 py-3 text-left active:bg-slate-50 dark:border-gray-800 dark:active:bg-gray-800/50"
+                    >
+                      <div className={`h-8 w-1 shrink-0 rounded-full ${isOverdue ? 'bg-[#f87168] dark:bg-[#e85d54]' : 'bg-[#579dff] dark:bg-[#4c8ef5]'}`} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-[#172b4d] dark:text-gray-200">{r.card.title}</p>
+                        <p className="truncate text-xs text-[#8590a2] dark:text-gray-500">{r.list.title}</p>
+                      </div>
+                      <span className={`shrink-0 text-xs font-medium ${isOverdue ? 'text-[#f87168]' : 'text-[#626f86] dark:text-gray-400'}`}>
+                        {fmtRange(r)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* ── Desktop: day-grid Gantt ───────────────────────────────────── */}
+      <div className="hidden h-full flex-col overflow-hidden sm:flex">
       {/* View header */}
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -184,12 +281,12 @@ export const TimelineView: React.FC<Props> = ({
             <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
               <Clock className="mb-2 h-8 w-8 opacity-40" />
               <p className="text-sm font-medium">Nenhum card com prazo definido</p>
-              <p className="mt-1 text-xs">{t('nodes.timelineView.tsx.definaDatasNosCardsParaVeLosNaTimeline')}</p>
+              <p className="mt-1 text-xs">Defina datas nos cards para vê-los na timeline</p>
             </div>
           ) : hasSomeCardsWithDates && rows.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
               <Clock className="mb-2 h-8 w-8 opacity-40" />
-              <p className="text-sm font-medium">{t('nodes.timelineView.tsx.nenhumCardComPrazoNestePeriodo')}</p>
+              <p className="text-sm font-medium">Nenhum card com prazo neste período</p>
               <p className="mt-1 text-xs">Navegue para outros meses para ver os demais cards</p>
             </div>
           ) : listGroups.map(({ list, rows: listRows }) => (
@@ -244,6 +341,7 @@ export const TimelineView: React.FC<Props> = ({
             </div>
           ))}
         </div>
+      </div>
       </div>
     </div>
   );

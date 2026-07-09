@@ -4,6 +4,7 @@ import { useAuthStore } from '@/store/auth';
 import { useAuthCheck } from '@/hooks/useAuthCheck';
 import { useTheme } from '@/hooks/useTheme';
 import { useElectronAuthSync } from './useElectronAuthSync';
+import { useHostAuthSync } from './useHostAuthSync';
 import { useKanbanNotifications } from './useKanbanNotifications';
 import { useDeepLink } from './useDeepLink';
 import { UpdateBanner } from './UpdateBanner';
@@ -43,7 +44,9 @@ const Spinner: React.FC = () => (
 
 export const KanbanApp: React.FC = () => {
   const { isAuthenticated } = useAuthStore();
-  const { hydrated } = useElectronAuthSync();
+  const { hydrated: electronHydrated } = useElectronAuthSync();
+  const { hydrated: hostHydrated } = useHostAuthSync();
+  const hydrated = electronHydrated && hostHydrated;
   useAuthCheck();
   useTheme();
   useKanbanNotifications();
@@ -93,7 +96,11 @@ export const KanbanApp: React.FC = () => {
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>
       </Suspense>
-      <AgentTerminal />
+      {/* Launches the MakeStudio Code TUI — redundant (and confusing) when
+          kanban is itself embedded inside MakeStudio Code; you're already
+          there. Electron hides it via injected CSS (see kanban-embed.ts);
+          the web iframe gets no such injection, so it's skipped here. */}
+      {typeof window !== 'undefined' && window.self === window.top && <AgentTerminal />}
     </>
   );
 };

@@ -226,7 +226,7 @@ export function PowerUpTemplateWizard({
             <div className="space-y-5">
               <div className="flex gap-3">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-medium text-[#626f86]">{t('nodes.powerUpTemplateWizard.tsx.icone')}</label>
+                  <label className="text-xs font-medium text-[#626f86]">Ícone</label>
                   <input
                     value={icon}
                     onChange={e => setIcon(e.target.value)}
@@ -236,12 +236,12 @@ export function PowerUpTemplateWizard({
                 </div>
                 <div className="flex flex-1 flex-col gap-1.5">
                   <label className="text-xs font-medium text-[#626f86]">
-   {t('nodes.powerUpTemplateWizard.tsx.nomeDoPowerUp')}<span className="text-red-500">*</span>
+   Nome do power-up<span className="text-red-500">*</span>
                   </label>
                   <input
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    placeholder={t('nodes.powerUpTemplateWizard.tsx.exNotificacaoNoDiscord_placeholder')}
+                    placeholder={"Ex: Notificação no Discord"}
                     className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#0c66e4] focus:outline-none focus:ring-1 focus:ring-[#0c66e4]"
                   />
                 </div>
@@ -249,7 +249,7 @@ export function PowerUpTemplateWizard({
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium text-[#626f86]">
-   {t('nodes.powerUpTemplateWizard.tsx.descricao')}<span className="text-slate-400">(opcional)</span>
+   Descrição<span className="text-slate-400">(opcional)</span>
                 </label>
                 <textarea
                   value={description}
@@ -352,15 +352,15 @@ export function PowerUpTemplateWizard({
                     placeholder="https://hooks.slack.com/services/..."
                     className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-mono dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#0c66e4] focus:outline-none focus:ring-1 focus:ring-[#0c66e4]"
                   />
-                  <p className="text-xs text-slate-400">{t('nodes.powerUpTemplateWizard.tsx.enderecoQueReceberaOsDadosQuandoOEventoOcorrerPost')}</p>
+                  <p className="text-xs text-slate-400">Endereço que receberá os dados quando o evento ocorrer (POST)</p>
                 </div>
               )}
 
               {mode === 'builder' && (
                 <>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-medium text-[#626f86]">{t('nodes.powerUpTemplateWizard.tsx.cabecalhosDaRequisicaoJson')}</label>
-                    <p className="text-xs text-slate-400">{t('nodes.powerUpTemplateWizard.tsx.defineAutenticacaoETipoDeConteudoEnviado')}</p>
+                    <label className="text-xs font-medium text-[#626f86]">Cabeçalhos da requisição (JSON)</label>
+                    <p className="text-xs text-slate-400">Define autenticação e tipo de conteúdo enviado</p>
                     <textarea
                       value={headersRaw}
                       onChange={e => setHeadersRaw(e.target.value)}
@@ -380,7 +380,7 @@ export function PowerUpTemplateWizard({
                       className="rounded-lg border border-slate-200 px-3 py-2.5 font-mono text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white resize-none focus:border-[#0c66e4] focus:outline-none"
                     />
                     <div className="space-y-1">
-                      <p className="text-xs text-slate-400">{t('nodes.powerUpTemplateWizard.tsx.cliqueParaInserirUmaVariavel')}</p>
+                      <p className="text-xs text-slate-400">Clique para inserir uma variável</p>
                       <div className="flex flex-wrap gap-1">
                         {TEMPLATE_VARIABLES.map(v => (
                           <button
@@ -406,7 +406,7 @@ export function PowerUpTemplateWizard({
                     </p>
                   </div>
                   <label className="text-xs font-medium text-[#626f86]">
-   {t('nodes.powerUpTemplateWizard.tsx.codigoJavascript')}<span className="text-red-500">*</span>
+   Código JavaScript<span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={script}
@@ -415,7 +415,7 @@ export function PowerUpTemplateWizard({
                     className="rounded-lg border border-slate-200 px-3 py-2.5 font-mono text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white resize-none focus:border-[#0c66e4] focus:outline-none"
                   />
                   <div className="space-y-1">
-                    <p className="text-xs text-slate-400">{t('nodes.powerUpTemplateWizard.tsx.inserirReferencia')}</p>
+                    <p className="text-xs text-slate-400">Inserir referência</p>
                     <div className="flex flex-wrap gap-1">
                       {TEMPLATE_VARIABLES.map(v => (
                         <button
@@ -460,7 +460,7 @@ export function PowerUpTemplateWizard({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{t('nodes.powerUpTemplateWizard.tsx.tipoDeAcao')}</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Tipo de ação</p>
                     <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-[#626f86] dark:bg-gray-700 dark:text-gray-300">
                       {MODES.find(m => m.value === mode)?.label}
                     </span>
@@ -480,11 +480,11 @@ export function PowerUpTemplateWizard({
                 <ul className="space-y-1.5 text-sm text-[#626f86]">
                   <li className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400 flex-shrink-0" />
-                    <span><strong>Salvar rascunho</strong> {t('nodes.powerUpTemplateWizard.tsx.ficaSalvoComoPrivadoVocePodeContinuarEditandoDepois')}</span>
+                    <span><strong>Salvar rascunho</strong> fica salvo como privado, você pode continuar editando depois</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-[#0c66e4] flex-shrink-0" />
-                    <span><strong>{t('nodes.powerUpTemplateWizard.tsx.enviarParaAprovacao')}</strong> {t('nodes.powerUpTemplateWizard.tsx.oAdministradorRevisaraAntesDeAtivarParaOBoard')}</span>
+                    <span><strong>Enviar para aprovação</strong> o administrador revisará antes de ativar para o board</span>
                   </li>
                 </ul>
               </div>
@@ -532,7 +532,7 @@ export function PowerUpTemplateWizard({
                 disabled={step === 0 ? !canNextStep0 : !canNextStep1}
                 className="flex items-center gap-1 rounded-xl bg-[#0c66e4] px-4 py-2 text-sm font-medium text-white hover:bg-[#0055cc] disabled:opacity-50 disabled:cursor-not-allowed"
               >
-   {t('nodes.powerUpTemplateWizard.tsx.proximo')}<ChevronRight className="h-4 w-4" />
+   Próximo<ChevronRight className="h-4 w-4" />
               </button>
             )}
           </div>

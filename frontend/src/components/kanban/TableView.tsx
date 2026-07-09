@@ -1,12 +1,12 @@
 // flowbuilder/src/components/kanban/TableView.tsx
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import DataTable from 'datatables.net-react';
 import DT from 'datatables.net-dt';
 import 'datatables.net-dt/css/dataTables.dataTables.min.css';
 import 'datatables.net-select-dt';
 import 'datatables.net-select-dt/css/select.dataTables.min.css';
 import 'datatables.net-responsive-dt';
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, Search, CheckSquare } from 'lucide-react';
 import { KanbanList, KanbanCard, KanbanBoardMember } from '@/services/kanban.service';
 
 DataTable.use(DT);
@@ -39,6 +39,7 @@ function dueBadgeHtml(dueDate: string): string {
 
 export const TableView: React.FC<Props> = ({ lists, boardMembers, onCardClick }) => {
   const cardMapRef = useRef<Map<string, KanbanCard>>(new Map());
+  const [mobileQuery, setMobileQuery] = useState('');
 
   const tableData = useMemo(() => {
     const map = new Map<string, KanbanCard>();
@@ -134,6 +135,12 @@ export const TableView: React.FC<Props> = ({ lists, boardMembers, onCardClick })
     },
   ], [boardMembers]);
 
+  const mobileRows = useMemo(() => {
+    const q = mobileQuery.trim().toLowerCase();
+    if (!q) return tableData;
+    return tableData.filter(r => r.title.toLowerCase().includes(q) || r.listTitle.toLowerCase().includes(q));
+  }, [tableData, mobileQuery]);
+
   return (
     <div className="flex w-full flex-col overflow-visible">
       {/* View header */}
@@ -145,8 +152,89 @@ export const TableView: React.FC<Props> = ({ lists, boardMembers, onCardClick })
         <span className="text-xs text-[#626f86] dark:text-gray-400">{tableData.length} cards</span>
       </div>
 
-      {/* DataTables — a view de tabela cresce com o conteúdo; a página externa faz o scroll */}
-      <div className="kanban-table-view overflow-visible p-4">
+      {/* ── Mobile: card-row list, no DataTables chrome ──────────────── */}
+      <div className="flex flex-col sm:hidden">
+        <div className="border-b border-slate-200 px-4 py-2.5 dark:border-gray-700">
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900/40">
+            <Search className="h-4 w-4 shrink-0 text-slate-400" />
+            <input
+              value={mobileQuery}
+              onChange={(e) => setMobileQuery(e.target.value)}
+              placeholder="Buscar card ou lista..."
+              className="w-full bg-transparent text-sm text-[#172b4d] placeholder:text-slate-400 outline-none dark:text-gray-100"
+            />
+          </div>
+        </div>
+
+        {mobileRows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
+            <LayoutGrid className="mb-2 h-8 w-8 opacity-40" />
+            <p className="text-sm font-medium">Nenhum card encontrado</p>
+          </div>
+        ) : (
+          mobileRows.map((row) => {
+            const checklistItems = row.checklists?.flatMap(g => g.items) ?? row.checklist ?? [];
+            const checklistDone = checklistItems.filter(i => i.done).length;
+            const members = (row.memberIds ?? []).slice(0, 3).map(id => boardMembers.find(bm => bm.id === id)).filter(Boolean) as KanbanBoardMember[];
+            const extraMembers = (row.memberIds?.length ?? 0) - members.length;
+            const isOverdue = row.dueDate && new Date(row.dueDate) < new Date();
+            return (
+              <button
+                key={row.id}
+                onClick={() => onCardClick(row)}
+                className="flex w-full items-stretch gap-3 border-b border-slate-100 px-4 py-3 text-left active:bg-slate-50 dark:border-gray-800 dark:active:bg-gray-800/50"
+              >
+                {row.coverColor && row.coverColor !== '#ffffff' && (
+                  <span className="w-1 shrink-0 rounded-full" style={{ background: row.coverColor }} />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-[#172b4d] dark:text-gray-100">{row.title}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-[#f1f2f4] px-1.5 py-0.5 text-[11px] font-medium text-[#44546f] dark:bg-gray-700 dark:text-gray-300">
+                      {row.listTitle}
+                    </span>
+                    {row.dueDate && (
+                      <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isOverdue ? 'bg-[#ffeceb] text-[#ae2a19] dark:bg-red-900/30 dark:text-red-300' : 'bg-[#e9eef5] text-[#626f86] dark:bg-gray-700 dark:text-gray-300'}`}>
+                        📅 {new Date(row.dueDate).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      </span>
+                    )}
+                    {checklistItems.length > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#f1f2f4] px-1.5 py-0.5 text-[10px] font-medium text-[#626f86] dark:bg-gray-700 dark:text-gray-300">
+                        <CheckSquare className="h-2.5 w-2.5" /> {checklistDone}/{checklistItems.length}
+                      </span>
+                    )}
+                    {row.labels?.slice(0, 3).map((l, i) => (
+                      <span key={i} className="h-2.5 w-4 rounded-full" style={{ background: l.color }} />
+                    ))}
+                  </div>
+                </div>
+                {members.length > 0 && (
+                  <div className="flex shrink-0 items-center self-start">
+                    {members.map((m) => (
+                      <span
+                        key={m.id}
+                        title={m.name}
+                        className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white text-[9px] font-bold text-white first:ml-0 dark:border-gray-800"
+                        style={{ background: m.avatarColor || '#579dff' }}
+                      >
+                        {m.name.slice(0, 2).toUpperCase()}
+                      </span>
+                    ))}
+                    {extraMembers > 0 && (
+                      <span className="-ml-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-[#e9eef5] text-[9px] font-bold text-[#626f86] dark:border-gray-800">
+                        +{extraMembers}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </button>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Desktop: DataTables — a view de tabela cresce com o conteúdo; a página externa faz o scroll ── */}
+      <div className="kanban-table-view hidden overflow-visible p-4 sm:block">
         <style>{`
           .kanban-table-view table.dataTable {
             border-collapse: collapse !important;

@@ -96,7 +96,7 @@ export const CalendarView: React.FC<Props> = ({
       <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-[#626f86] dark:text-gray-400" />
-          <h2 className="text-sm font-semibold text-[#172b4d] dark:text-gray-100">{t('nodes.calendarView.tsx.calendario')}</h2>
+          <h2 className="text-sm font-semibold text-[#172b4d] dark:text-gray-100">Calendário</h2>
         </div>
         <span className="text-xs text-[#626f86] dark:text-gray-400">{allCards.length} cards</span>
       </div>
@@ -193,8 +193,8 @@ export const CalendarView: React.FC<Props> = ({
         ) : (
           <div className="flex flex-col items-center justify-center py-16 text-[#8590a2] dark:text-gray-500">
             <Calendar className="mb-2 h-8 w-8 opacity-40" />
-            <p className="text-sm font-medium">{t('nodes.calendarView.tsx.nenhumCardComPrazoNesteMes')}</p>
-            <p className="mt-1 text-xs">{t('nodes.calendarView.tsx.definaDatasDeVencimentoNosCardsParaVeLosAqui')}</p>
+            <p className="text-sm font-medium">Nenhum card com prazo neste mês</p>
+            <p className="mt-1 text-xs">Defina datas de vencimento nos cards para vê-los aqui</p>
           </div>
         )}
       </div>

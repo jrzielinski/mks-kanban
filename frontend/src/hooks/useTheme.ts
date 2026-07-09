@@ -107,13 +107,19 @@ export function useTheme() {
     applyTheme(saved.style, saved.mode);
   }, []);
 
-  // Host sync — only fires when embedded in MakeStudio (iframe posts its
-  // active theme name on mount + on every theme change). No-op standalone.
+  // Host sync — only fires when embedded in MakeStudio. Two message types
+  // carry the theme name: `mks-kanban:theme` fires on every LATER change
+  // (MutationObserver on the host's data-theme attribute), but says nothing
+  // on the FIRST load — the initial theme instead rides along with the
+  // `mks-kanban:sso-session` message the host sends on iframe load. Without
+  // handling both, the very first render stays on the local dark fallback
+  // until the user happens to change the host's theme once.
   useEffect(() => {
     const onMessage = (ev: MessageEvent): void => {
       const data = ev.data as { type?: string; theme?: { name?: string } } | null;
-      if (data?.type !== 'mks-kanban:theme') return;
-      const mapped = HOST_THEME_MAP[data.theme?.name ?? ''];
+      if (data?.type !== 'mks-kanban:theme' && data?.type !== 'mks-kanban:sso-session') return;
+      if (!data.theme?.name) return;
+      const mapped = HOST_THEME_MAP[data.theme.name];
       if (!mapped) return;
       setStyleState(mapped.style);
       setModeState(mapped.mode);

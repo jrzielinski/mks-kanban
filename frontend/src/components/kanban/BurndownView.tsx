@@ -116,7 +116,7 @@ export const BurndownView: React.FC<Props> = ({
           </div>
           <div>
             <p className="text-2xl font-bold text-[#172b4d] dark:text-white">{data.completedCount}</p>
-            <p className="text-xs text-[#626f86] dark:text-gray-400">{t('nodes.burndownView.tsx.concluidos')}</p>
+            <p className="text-xs text-[#626f86] dark:text-gray-400">Concluídos</p>
           </div>
         </div>
 

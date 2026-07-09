@@ -392,7 +392,8 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
     <div
       ref={setColumnNodeRef}
       style={columnStyle}
-      className="flex max-h-[calc(100vh-172px)] w-[85vw] max-w-[282px] flex-shrink-0 snap-start flex-col sm:w-[282px]"
+      data-kanban-col={list.id}
+      className="flex h-full w-[85vw] max-w-[282px] flex-shrink-0 snap-start flex-col sm:h-auto sm:max-h-[calc(100vh-172px)] sm:w-[282px]"
     >
       <div className="flex max-h-full flex-col overflow-hidden rounded-[22px] border border-slate-200/90 bg-[#f8fafc] shadow-[0_12px_28px_-24px_rgba(15,23,42,0.22)] dark:border-gray-700 dark:bg-gray-800">
         <div

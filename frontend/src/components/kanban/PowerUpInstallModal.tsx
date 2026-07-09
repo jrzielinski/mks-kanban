@@ -164,7 +164,7 @@ export function PowerUpInstallModal({
           onChange={e => setConfig(p => ({ ...p, [field.key]: e.target.value }))}
           className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-[#172b4d] dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-[#0c66e4] focus:outline-none focus:ring-1 focus:ring-[#0c66e4]"
         >
-          <option value="">{t('nodes.powerUpInstallModal.tsx.selecioneUmaOpcao')}</option>
+          <option value="">Selecione uma opção</option>
           {field.options.map(o => <option key={o} value={o}>{o}</option>)}
         </select>
       ) : (
@@ -222,7 +222,7 @@ export function PowerUpInstallModal({
             <div className="flex items-start gap-3 rounded-xl bg-green-50 p-4 dark:bg-green-900/20">
               <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600 dark:text-green-400" />
               <p className="text-sm text-green-700 dark:text-green-300">
-   {t('nodes.powerUpInstallModal.tsx.estePowerUpNaoPrecisaDeConfiguracaoCliqueEm')}<strong>Instalar</strong> para ativar.
+   Este power-up não precisa de configuração. Clique em <strong>Instalar</strong> para ativar.
               </p>
             </div>
           ) : (
@@ -246,7 +246,7 @@ export function PowerUpInstallModal({
               {requiredFields.length > 0 && (
                 <div className="space-y-3">
                   {requiredFields.length < (template.configSchema ?? []).length && (
-                    <p className="text-xs font-medium uppercase tracking-wide text-[#626f86]">{t('nodes.powerUpInstallModal.tsx.obrigatorio')}</p>
+                    <p className="text-xs font-medium uppercase tracking-wide text-[#626f86]">Obrigatório</p>
                   )}
                   {requiredFields.map(renderField)}
                 </div>

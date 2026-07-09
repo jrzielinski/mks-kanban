@@ -8204,6 +8204,7 @@
     },
     "toolbar": {
       "globalSearch": "Busca global (Ctrl+K)",
+      "more": "Mais opções",
       "stopWatching": "Parar de assistir",
       "startWatching": "Assistir board",
       "duplicateBoard": "Duplicar board",

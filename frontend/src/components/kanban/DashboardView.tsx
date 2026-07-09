@@ -12,14 +12,14 @@ interface Props {
 
 function StatCard({ label, value, sub, icon, color }: { label: string; value: number | string; sub?: string; icon: React.ReactNode; color: string }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl ${color}`}>
+    <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:gap-4 sm:p-4">
+      <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 ${color}`}>
         {icon}
       </div>
-      <div>
-        <p className="text-2xl font-bold text-[#172b4d] dark:text-white">{value}</p>
-        <p className="text-xs text-[#626f86] dark:text-gray-400">{label}</p>
-        {sub && <p className="text-[10px] text-[#8590a2] dark:text-gray-500">{sub}</p>}
+      <div className="min-w-0">
+        <p className="text-xl font-bold text-[#172b4d] dark:text-white sm:text-2xl">{value}</p>
+        <p className="truncate text-xs text-[#626f86] dark:text-gray-400">{label}</p>
+        {sub && <p className="truncate text-[10px] text-[#8590a2] dark:text-gray-500">{sub}</p>}
       </div>
     </div>
   );
@@ -99,9 +99,9 @@ export const DashboardView: React.FC<Props> = ({
         <span className="text-xs text-[#626f86] dark:text-gray-400">{stats.totalCards} cards</span>
       </div>
 
-      <div className="flex-1 overflow-auto p-5 space-y-5">
+      <div className="flex-1 overflow-auto p-3 space-y-3 sm:p-5 sm:space-y-5">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         <StatCard label="Total de cards" value={stats.totalCards} icon={<BarChart2 className="h-5 w-5 text-white" />} color="bg-[#579dff]" />
         <StatCard label="Atrasados" value={stats.overdueCards} sub={stats.totalCards > 0 ? `${Math.round(stats.overdueCards/stats.totalCards*100)}% do total` : undefined} icon={<AlertTriangle className="h-5 w-5 text-white" />} color="bg-[#f87168]" />
         <StatCard label="Vencem hoje" value={stats.dueToday} icon={<Calendar className="h-5 w-5 text-white" />} color="bg-[#f5cd47]" />
@@ -110,7 +110,7 @@ export const DashboardView: React.FC<Props> = ({
 
       {/* Overdue and due-today card lists */}
       {(stats.overdueCardList.length > 0 || stats.dueTodayCardList.length > 0) && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
           {stats.overdueCardList.length > 0 && (
             <div className="rounded-2xl border border-[#f87168]/30 bg-white p-4 dark:border-[#f87168]/20 dark:bg-gray-800">
               <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[#ae2a19] dark:text-[#f87168]">
@@ -152,9 +152,9 @@ export const DashboardView: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         {/* Cards por lista (bar chart) */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <h3 className="mb-3 text-sm font-semibold text-[#172b4d] dark:text-gray-100">Cards por lista</h3>
           <div className="space-y-2">
             {stats.byList.map(({ title, count, color }) => (
@@ -181,7 +181,7 @@ export const DashboardView: React.FC<Props> = ({
         </div>
 
         {/* Progresso de checklists */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <h3 className="mb-3 text-sm font-semibold text-[#172b4d] dark:text-gray-100">Progresso de checklists</h3>
           {stats.totalChecklistItems === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-[#8590a2] dark:text-gray-500">
@@ -213,13 +213,13 @@ export const DashboardView: React.FC<Props> = ({
         </div>
 
         {/* Top membros */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <h3 className="mb-3 text-sm font-semibold text-[#172b4d] dark:text-gray-100">Cards por membro</h3>
           <div className="space-y-2.5">
             {stats.topMembers.length === 0 && (
               <div className="flex flex-col items-center py-4 text-[#8590a2] dark:text-gray-500">
                 <Users className="mb-1 h-6 w-6 opacity-40" />
-                <p className="text-xs">{t('nodes.dashboardView.tsx.nenhumMembroAtribuido')}</p>
+                <p className="text-xs">Nenhum membro atribuído</p>
               </div>
             )}
             {stats.topMembers.map(({ member, count }, i) => (
@@ -240,7 +240,7 @@ export const DashboardView: React.FC<Props> = ({
         </div>
 
         {/* Distribuição de vencimentos */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+        <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800 sm:p-4">
           <h3 className="mb-3 text-sm font-semibold text-[#172b4d] dark:text-gray-100">Status de vencimentos</h3>
           {(() => {
             const now = new Date();

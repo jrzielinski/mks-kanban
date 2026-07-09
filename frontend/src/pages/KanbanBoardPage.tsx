@@ -87,8 +87,25 @@ export const KanbanBoardPage: React.FC = () => {
   const [activeCard, setActiveCard] = useState<KanbanCard | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [addingList, setAddingList] = useState(false);
+  // Mobile list-tab strip: tracks which column is most visible in the
+  // horizontal scroll-snap row, so the user always knows which list they're
+  // looking at and can jump straight to another one instead of blind-swiping.
+  const boardScrollRef = useRef<HTMLDivElement>(null);
+  const [activeListId, setActiveListId] = useState<string | null>(null);
   const [newListTitle, setNewListTitle] = useState('');
   const [newListColor, setNewListColor] = useState('');
+  const listColorOptions = [
+    { label: t('kanbanBoardPage.addList.colors.none'), value: '' },
+    { label: t('kanbanBoardPage.addList.colors.blue'), value: '#579dff' },
+    { label: t('kanbanBoardPage.addList.colors.purple'), value: '#9f8fef' },
+    { label: t('kanbanBoardPage.addList.colors.red'), value: '#f87168' },
+    { label: t('kanbanBoardPage.addList.colors.green'), value: '#4bce97' },
+    { label: t('kanbanBoardPage.addList.colors.yellow'), value: '#f5cd47' },
+    { label: t('kanbanBoardPage.addList.colors.orange'), value: '#fea362' },
+    { label: t('kanbanBoardPage.addList.colors.cyan'), value: '#06b6d4' },
+    { label: t('kanbanBoardPage.addList.colors.gray'), value: '#6b7280' },
+    { label: t('kanbanBoardPage.addList.colors.dark'), value: '#1e293b' },
+  ];
   const [showMembersEditor, setShowMembersEditor] = useState(false);
   const [newMemberName, setNewMemberName] = useState('');
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -670,6 +687,42 @@ export const KanbanBoardPage: React.FC = () => {
       cards: l.cards.filter(cardMatchesFilter),
     }));
   }, [lists, hasActiveFilter, cardMatchesFilter, isSnoozed]);
+
+  // Tracks the most-visible column in the horizontal scroll-snap row (mobile
+  // list-tab strip). Re-observes whenever the set of lists changes — columns
+  // mount/unmount as lists are added/removed/filtered.
+  useEffect(() => {
+    const container = boardScrollRef.current;
+    if (!container) return;
+    const columns = container.querySelectorAll<HTMLElement>('[data-kanban-col]');
+    if (columns.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let best: { id: string; ratio: number } | null = null;
+        for (const entry of entries) {
+          if (!best || entry.intersectionRatio > best.ratio) {
+            const id = (entry.target as HTMLElement).dataset.kanbanCol;
+            if (id) best = { id, ratio: entry.intersectionRatio };
+          }
+        }
+        if (best && best.ratio > 0) setActiveListId(best.id);
+      },
+      { root: container, threshold: [0.25, 0.5, 0.75, 1] },
+    );
+    columns.forEach((col) => observer.observe(col));
+    return () => observer.disconnect();
+  }, [filteredLists]);
+
+  const scrollToList = (listId: string): void => {
+    const el = boardScrollRef.current?.querySelector<HTMLElement>(`[data-kanban-col="${listId}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'start', block: 'nearest' });
+  };
+
+  // Drives the mobile "more columns to the right" fade hint below — hides it
+  // once the last column scrolls into view (nothing left to hint at).
+  const isLastListVisible =
+    filteredLists.length > 0 && activeListId === filteredLists[filteredLists.length - 1].id;
 
   // ── DND ────────────────────────────────────────────────────────────────────
 
@@ -1448,7 +1501,7 @@ export const KanbanBoardPage: React.FC = () => {
       }`}
       style={bgPageImage ? { backgroundImage: `url(${bgPageImage})`, backgroundSize: 'cover', backgroundPosition: 'center' } : bgPageColor ? { backgroundColor: bgPageColor } : undefined}
     >
-      <div className={`relative rounded-[24px] border border-slate-200/90 bg-white shadow-[0_18px_42px_-28px_rgba(15,23,42,0.22)] dark:border-gray-700 dark:bg-gray-800 ${viewMode === 'table' ? 'min-h-max' : ''}`}>
+      <div className={`relative flex flex-col rounded-[24px] border border-slate-200/90 bg-white shadow-[0_18px_42px_-28px_rgba(15,23,42,0.22)] dark:border-gray-700 dark:bg-gray-800 ${viewMode === 'table' ? 'min-h-max' : 'min-h-0 flex-1'}`}>
         {!focusMode && <div className="border-b border-slate-200 dark:border-gray-700 px-4 py-3.5">
           <div className="flex items-center gap-3">
             <button
@@ -1457,7 +1510,7 @@ export const KanbanBoardPage: React.FC = () => {
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1 sm:flex-initial">
               {editingBoardTitle ? (
                 <input
                   autoFocus
@@ -1518,7 +1571,12 @@ export const KanbanBoardPage: React.FC = () => {
               )}
             </div>
 
-            <div className="ml-auto flex min-w-0 items-center gap-2 overflow-x-auto scrollbar-hide [&>*]:shrink-0">
+            {/* Mobile — no action row at all; back + title is enough chrome.
+                Filter/notifications/board-panel dropdowns below are sized for
+                desktop (w-80 anchored panels) and weren't worth exposing here
+                until they get their own mobile treatment. */}
+
+            <div className="ml-auto hidden min-w-0 items-center gap-2 overflow-x-auto scrollbar-hide [&>*]:shrink-0 sm:flex">
               {/* Grupo 1: Online user presence avatars */}
               {otherOnlineUsers.length > 0 && (() => {
                 const others = otherOnlineUsers;
@@ -1865,8 +1923,8 @@ export const KanbanBoardPage: React.FC = () => {
         </div>}
 
         {!focusMode && <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide border-b border-slate-200/90 dark:border-gray-700 px-4 py-2 [&>*]:shrink-0">
-          {/* View mode tabs */}
-          <div className="flex rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-gray-600/80 dark:bg-gray-700/60">
+          {/* View mode tabs — desktop: joined segmented control. */}
+          <div className="hidden rounded-xl border border-slate-200/80 bg-slate-50 p-0.5 dark:border-gray-600/80 dark:bg-gray-700/60 sm:flex">
             <button onClick={() => setViewMode('board')} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'board' ? 'bg-white text-slate-900 shadow-sm dark:bg-gray-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-gray-400'}`}>
               <KanbanIcon className="h-3.5 w-3.5" /> {t('kanbanBoardPage.viewTabs.board')}
             </button>
@@ -1888,6 +1946,39 @@ export const KanbanBoardPage: React.FC = () => {
             <button onClick={() => setViewMode('burndown')} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${viewMode === 'burndown' ? 'bg-white text-slate-900 shadow-sm dark:bg-gray-600 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:text-gray-400'}`}>
               <TrendingDown className="h-3.5 w-3.5" /> {t('kanbanBoardPage.viewTabs.burndown')}
             </button>
+          </div>
+
+          {/* View mode tabs — mobile: icon-only round buttons. The active one
+              expands to show its label next to the icon; the rest stay as
+              plain icons — same idea as an iOS tab bar with a selected state. */}
+          <div className="flex gap-2 sm:hidden">
+            {([
+              { mode: 'board', icon: KanbanIcon, label: t('kanbanBoardPage.viewTabs.board') },
+              { mode: 'calendar', icon: Calendar, label: t('kanbanBoardPage.viewTabs.calendar') },
+              { mode: 'table', icon: Table2, label: t('kanbanBoardPage.viewTabs.table') },
+              { mode: 'dashboard', icon: Gauge, label: t('kanbanBoardPage.viewTabs.dashboard') },
+              { mode: 'timeline', icon: BarChart2, label: t('kanbanBoardPage.viewTabs.timeline') },
+              { mode: 'map', icon: MapPin, label: t('kanbanBoardPage.viewTabs.map') },
+              { mode: 'burndown', icon: TrendingDown, label: t('kanbanBoardPage.viewTabs.burndown') },
+            ] as { mode: typeof viewMode; icon: typeof KanbanIcon; label: string }[]).map(({ mode, icon: Icon, label }) => {
+              const active = viewMode === mode;
+              return (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  aria-label={label}
+                  title={label}
+                  className={`flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-full border transition-colors ${
+                    active
+                      ? 'border-[#0c66e4] bg-[#0c66e4] px-3.5 text-white'
+                      : 'w-9 border-slate-200 bg-white text-slate-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                  }`}
+                >
+                  <Icon className="h-[18px] w-[18px] shrink-0" />
+                  {active && <span className="whitespace-nowrap text-xs font-semibold">{label}</span>}
+                </button>
+              );
+            })}
           </div>
 
           <div className="hidden items-center gap-2 text-[11px] font-medium text-slate-500 lg:flex dark:text-gray-400">
@@ -2148,7 +2239,7 @@ export const KanbanBoardPage: React.FC = () => {
 
         {/* Main area: board + optional right panel */}
         <div className={`${viewMode === 'table' ? 'block overflow-visible' : 'flex flex-1 overflow-hidden'}`}>
-          <div className={`${viewMode === 'table' ? 'border-t border-slate-100 p-3.5 overflow-visible' : 'flex-1 border-t border-slate-100 dark:border-gray-700 p-3.5 overflow-hidden'} dark:border-gray-700`}>
+          <div className={`${viewMode === 'table' ? 'border-t border-slate-100 p-1.5 sm:p-3.5 overflow-visible' : 'flex-1 border-t border-slate-100 dark:border-gray-700 p-1.5 sm:p-3.5 overflow-hidden'} dark:border-gray-700`}>
             {viewMode === 'calendar' ? (
               <div className="h-full rounded-[20px] border border-slate-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
                 <CalendarView lists={filteredLists} onCardClick={setSelectedCard} />
@@ -2174,7 +2265,32 @@ export const KanbanBoardPage: React.FC = () => {
                 <BurndownView boardId={board?.id ?? ''} />
               </div>
             ) : (
-            <div className="h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef3f8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-gray-700 dark:bg-gray-900 dark:[background-image:none]">
+            <div className="flex h-full flex-col">
+              {/* Mobile list-tab strip — only one column is visible at a time in
+                  the scroll-snap row below, so this is the only way to see what
+                  lists exist and jump to one directly instead of blind-swiping. */}
+              {filteredLists.length > 0 && (
+                <div className="mb-2 flex gap-1.5 overflow-x-auto scrollbar-hide sm:hidden">
+                  {filteredLists.map((list) => (
+                    <button
+                      key={list.id}
+                      onClick={() => scrollToList(list.id)}
+                      className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                        activeListId === list.id
+                          ? 'border-[#0c66e4] bg-[#0c66e4] text-white'
+                          : 'border-slate-200 bg-white text-slate-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                      }`}
+                    >
+                      <span className="max-w-[120px] truncate">{list.title}</span>
+                      <span className={activeListId === list.id ? 'text-white/70' : 'text-slate-400 dark:text-gray-500'}>
+                        {list.cards.length}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="relative min-h-0 flex-1">
+              <div ref={boardScrollRef} className="h-full snap-x snap-mandatory overflow-x-auto overflow-y-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#f8fafc_0%,#eef3f8_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] dark:border-gray-700 dark:bg-gray-900 dark:[background-image:none]">
               <div className="h-1 w-full" style={{ background: `linear-gradient(90deg, ${bgColor} 0%, ${bgColor}cc 100%)` }} />
               <DndContext
                 sensors={sensors}
@@ -2183,9 +2299,9 @@ export const KanbanBoardPage: React.FC = () => {
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
               >
-                <div className="flex h-full min-w-max items-start gap-3.5 px-3.5 py-3.5">
+                <div className="flex h-full min-w-max items-stretch gap-3.5 px-3.5 py-3.5 sm:items-start">
                   {lists.length === 0 && !isReadOnly && (
-                    <div className="flex w-full items-center justify-center py-20">
+                    <div className="flex h-full w-full items-center justify-center py-20">
                       <div className="flex flex-col items-center gap-5 text-center max-w-sm">
                         <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-gray-700 dark:to-gray-800 shadow-sm">
                           <KanbanIcon className="h-9 w-9 text-slate-400 dark:text-gray-500" />
@@ -2252,9 +2368,14 @@ export const KanbanBoardPage: React.FC = () => {
                     </div>
                   )}
 
-                  {!isReadOnly && <div className="w-[85vw] max-w-[282px] flex-shrink-0 snap-start sm:w-[282px]">
+                  {/* Desktop only — mobile triggers the same addingList state from
+                      the floating "+" button below, so it never sits in the
+                      horizontal scroll-snap row as an awkward half-visible tile. */}
+                  {!isReadOnly && (lists.length > 0 || addingList) && <div className="hidden w-[282px] flex-shrink-0 snap-start sm:block">
                     {addingList ? (
-                      <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.28)] dark:border-gray-600 dark:bg-gray-800">
+                      // Desktop only — mobile gets the bottom-sheet below (fixed, escapes
+                      // the horizontal scroll-snap row entirely instead of squeezing in).
+                      <div className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_10px_24px_-18px_rgba(15,23,42,0.28)] dark:border-gray-600 dark:bg-gray-800 sm:block">
                         <input
                           autoFocus
                           value={newListTitle}
@@ -2270,18 +2391,7 @@ export const KanbanBoardPage: React.FC = () => {
                         <div className="mb-3">
                           <p className="mb-1.5 text-[11px] font-medium text-[#626f86] dark:text-gray-400">{t('kanbanBoardPage.addList.colorLabel')}</p>
                           <div className="flex flex-wrap gap-1.5">
-                            {[
-                              { label: t('kanbanBoardPage.addList.colors.none'), value: '' },
-                              { label: t('kanbanBoardPage.addList.colors.blue'), value: '#579dff' },
-                              { label: t('kanbanBoardPage.addList.colors.purple'), value: '#9f8fef' },
-                              { label: t('kanbanBoardPage.addList.colors.red'), value: '#f87168' },
-                              { label: t('kanbanBoardPage.addList.colors.green'), value: '#4bce97' },
-                              { label: t('kanbanBoardPage.addList.colors.yellow'), value: '#f5cd47' },
-                              { label: t('kanbanBoardPage.addList.colors.orange'), value: '#fea362' },
-                              { label: t('kanbanBoardPage.addList.colors.cyan'), value: '#06b6d4' },
-                              { label: t('kanbanBoardPage.addList.colors.gray'), value: '#6b7280' },
-                              { label: t('kanbanBoardPage.addList.colors.dark'), value: '#1e293b' },
-                            ].map(c => (
+                            {listColorOptions.map(c => (
                               <button
                                 key={c.value || "__none__"}
                                 type="button"
@@ -2320,6 +2430,80 @@ export const KanbanBoardPage: React.FC = () => {
                   </div>}
                 </div>
 
+                {/* Mobile "add list" trigger — floating button instead of a tile
+                    inside the horizontal scroll-snap row (which either sat flush
+                    against the last column or peeked in half-cut-off, looking
+                    broken). Opens the same bottom sheet as the desktop trigger. */}
+                {!isReadOnly && !addingList && (
+                  <button
+                    onClick={() => setAddingList(true)}
+                    aria-label={t('kanbanBoardPage.addList.addButton')}
+                    className="fixed bottom-6 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#0c66e4] text-white shadow-[0_10px_24px_-6px_rgba(12,102,228,0.55)] transition-transform active:scale-95 sm:hidden"
+                  >
+                    <Plus className="h-6 w-6" />
+                  </button>
+                )}
+
+                {/* Mobile "add list" — bottom sheet instead of squeezing an inline
+                    card into the scroll-snap row. sm:hidden mirrors the desktop
+                    card above, which is hidden below sm. */}
+                {!isReadOnly && addingList && (
+                  <div
+                    className="fixed inset-0 z-50 flex items-end bg-black/40 sm:hidden"
+                    onClick={() => { setAddingList(false); setNewListTitle(''); setNewListColor(''); }}
+                  >
+                    <div
+                      className="w-full rounded-t-3xl bg-white p-4 shadow-2xl dark:bg-gray-800"
+                      style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-slate-300 dark:bg-gray-600" />
+                      <h3 className="mb-3 text-base font-semibold text-slate-900 dark:text-white">
+                        {t('kanbanBoardPage.addList.addButton')}
+                      </h3>
+                      <input
+                        autoFocus
+                        value={newListTitle}
+                        onChange={(e) => setNewListTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') void handleAddList();
+                          if (e.key === 'Escape') { setAddingList(false); setNewListTitle(''); setNewListColor(''); }
+                        }}
+                        placeholder={t('kanbanBoardPage.addList.placeholder')}
+                        className="mb-4 w-full rounded-xl border border-[#0c66e4] bg-[#f8fafc] px-3 py-3 text-base text-[#172b4d] outline-none shadow-sm dark:border-blue-500 dark:bg-gray-700 dark:text-gray-100"
+                      />
+                      <p className="mb-2 text-[11px] font-medium text-[#626f86] dark:text-gray-400">{t('kanbanBoardPage.addList.colorLabel')}</p>
+                      <div className="mb-5 flex flex-wrap gap-2.5">
+                        {listColorOptions.map(c => (
+                          <button
+                            key={c.value || "__none__"}
+                            type="button"
+                            title={c.label}
+                            onClick={() => setNewListColor(c.value)}
+                            className={`h-8 w-8 rounded-full border-2 transition-transform active:scale-95 flex-shrink-0 ${newListColor === c.value ? 'border-[#0c66e4] dark:border-blue-400' : 'border-transparent'} ${!c.value ? 'bg-slate-200 dark:bg-gray-600' : ''}`}
+                            style={c.value ? { background: c.value } : undefined}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleAddList()}
+                          className="flex-1 rounded-xl bg-[#0c66e4] px-3 py-3 text-base font-medium text-white transition-colors hover:bg-[#0055cc]"
+                        >
+                          {t('kanbanBoardPage.addList.addButton')}
+                        </button>
+                        <button
+                          onClick={() => { setAddingList(false); setNewListTitle(''); setNewListColor(''); }}
+                          className="flex h-12 w-12 items-center justify-center rounded-xl text-[#44546f] transition-colors hover:bg-slate-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
                   {activeCard && (
                     <div className="rotate-1 scale-[1.02] shadow-[0_24px_48px_-12px_rgba(15,23,42,0.42)] opacity-95 cursor-grabbing">
@@ -2350,6 +2534,13 @@ export const KanbanBoardPage: React.FC = () => {
                   })()}
                 </DragOverlay>
               </DndContext>
+              </div>
+              {filteredLists.length > 1 && !isLastListVisible && (
+                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-12 items-center justify-end rounded-r-[20px] bg-gradient-to-l from-[#eef3f8] via-[#eef3f8]/70 to-transparent pr-1 dark:from-gray-900 dark:via-gray-900/70 sm:hidden">
+                  <ChevronRight className="h-5 w-5 text-slate-400 dark:text-gray-500" />
+                </div>
+              )}
+              </div>
             </div>
             )}
           </div>
@@ -2754,7 +2945,7 @@ export const KanbanBoardPage: React.FC = () => {
                           <div className="mt-2 border-t border-slate-200 dark:border-gray-600 pt-2">
                             <p className="text-[10px] text-[#626f86] dark:text-gray-400">
                               {t('kanbanBoardPage.boardPanel.powerups.burndown.sprintLabel', { days: pu.config?.sprintDurationDays || 14 })}
-                              {pu.config?.sprintStartDate && <> {t('nodes.kanbanBoardPage.tsx.inicio')}<span className="font-medium">{pu.config.sprintStartDate}</span></>}
+                              {pu.config?.sprintStartDate && <> Início: <span className="font-medium">{pu.config.sprintStartDate}</span></>}
                             </p>
                             <p className="text-[10px] text-[#626f86] dark:text-gray-400">
                               {t('kanbanBoardPage.boardPanel.powerups.burndown.trackingLabel')}<span className="font-medium">{pu.config?.trackingField === 'points' ? t('kanbanBoardPage.boardPanel.powerups.burndown.storyPoints') : t('kanbanBoardPage.boardPanel.powerups.burndown.cards')}</span>

@@ -773,7 +773,10 @@ const kanbanService = {
 
   // Burndown Chart Power-Up
   async getBurndownData(boardId: string): Promise<BurndownChartData> {
-    const r = await api.get(`/kanban/boards/${boardId}/burndown`);
+    // _skipToast: BurndownView already renders its own explanatory empty
+    // state ("instale o power-up...") when this 500s on an unconfigured
+    // board — the generic red toast on top of it was redundant/scary.
+    const r = await api.get(`/kanban/boards/${boardId}/burndown`, { _skipToast: true } as any);
     return r.data;
   },
   async startNewSprint(boardId: string): Promise<void> {
