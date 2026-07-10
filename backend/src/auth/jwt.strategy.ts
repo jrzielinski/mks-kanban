@@ -64,7 +64,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: any): Promise<JwtPayload> {
     return {
-      sub: payload.sub,
+      // gptapi (host account) tokens carry the user id as `id`, not `sub` —
+      // kanban's own desktop-token/local tokens use `sub`. Accept either.
+      sub: payload.sub ?? payload.id,
       sessionId: payload.sessionId ?? '',
       tenantId: payload.tenantId ?? 'desktop',
       email: payload.email ?? '',

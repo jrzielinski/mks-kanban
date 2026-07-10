@@ -62,6 +62,8 @@ api.interceptors.request.use(
 
 let isRefreshing = false
 let failedQueue: any[] = []
+let lastHostResyncAt = 0
+const HOST_RESYNC_COOLDOWN_MS = 15000
 
 const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(prom => {
@@ -96,7 +98,17 @@ api.interceptors.response.use(
       // session (covers token expiry, or the host's own token having
       // rotated since the iframe first loaded) before falling back to
       // kanban's native refresh/login below.
-      if (isEmbeddedInHost()) {
+      //
+      // Cooldown-gated: if the host's token is itself being rejected (not
+      // just stale), every in-flight request 401s independently and each
+      // would otherwise re-trigger its own resync — a login/logout storm
+      // (each fresh seed flips isAuthenticated true, each failed retry's
+      // 401 bubbles to useAuthCheck's logout() and flips it back). One
+      // resync per cooldown window is enough to recover a genuinely stale
+      // token without storming a genuinely-rejected one.
+      const now = Date.now()
+      if (isEmbeddedInHost() && now - lastHostResyncAt > HOST_RESYNC_COOLDOWN_MS) {
+        lastHostResyncAt = now
         const session = await requestHostSession()
         if (session?.token) {
           seedAuth(session)
