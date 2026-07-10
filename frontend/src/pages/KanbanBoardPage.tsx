@@ -513,6 +513,12 @@ export const KanbanBoardPage: React.FC = () => {
     setPendingFocusCardId(null);
   }, [pendingFocusCardId, allCardsMap]);
 
+  // "Expand" button on the card modal — a purely visual full-viewport mode,
+  // no route change. Navigating to a nested route here previously remounted
+  // KanbanBoardPage (fresh loading state, lists/board refetched from
+  // scratch), so the just-opened card rendered with half its data missing.
+  const [cardFullPage, setCardFullPage] = useState(false);
+
   // Keyboard shortcuts
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
@@ -3526,31 +3532,41 @@ export const KanbanBoardPage: React.FC = () => {
           </div>
         )}
 
-      {selectedCard && (
-        <CardDetailModal
-          card={selectedCard}
-          boardId={boardId!}
-          boardMembers={boardMembers}
-          customFieldDefs={board?.customFieldDefs ?? []}
-          listTitle={lists.find((l) => l.id === selectedCard.listId)?.title ?? ''}
-          onClose={() => setSelectedCard(null)}
-          onUpdated={handleCardUpdated}
-          onDeleted={handleCardDeleted}
-          onCardAdded={handleCardAdded}
-          onOpenCard={(cardId) => {
-            const found = lists.flatMap(l => l.cards ?? []).find(c => c.id === cardId);
-            if (found) setSelectedCard(found);
-          }}
-          onOpenFullPage={() => navigate(`/kanban/${boardId}/cards/${selectedCard.id}`)}
-          onEditingStart={(field) => handleCardEditingStart(selectedCard.id, selectedCard.boardId, field)}
-          onEditingStop={(field) => handleCardEditingStop(selectedCard.id, selectedCard.boardId, field)}
-          editorsInfo={cardEditors.filter(e => e.cardId === selectedCard.id)}
-          currentUserId={currentUserId}
-          canEdit={canEditCards}
-          canComment={canComment}
-          votingLimit={board?.permissions?.votingLimit ?? 0}
-        />
-      )}
+      {selectedCard && (() => {
+        const modal = (
+          <CardDetailModal
+            card={selectedCard}
+            boardId={boardId!}
+            boardMembers={boardMembers}
+            customFieldDefs={board?.customFieldDefs ?? []}
+            listTitle={lists.find((l) => l.id === selectedCard.listId)?.title ?? ''}
+            onClose={() => { setSelectedCard(null); setCardFullPage(false); }}
+            onUpdated={handleCardUpdated}
+            onDeleted={handleCardDeleted}
+            onCardAdded={handleCardAdded}
+            onOpenCard={(cardId) => {
+              const found = lists.flatMap(l => l.cards ?? []).find(c => c.id === cardId);
+              if (found) setSelectedCard(found);
+            }}
+            onOpenFullPage={cardFullPage ? undefined : () => setCardFullPage(true)}
+            fullPage={cardFullPage}
+            onEditingStart={(field) => handleCardEditingStart(selectedCard.id, selectedCard.boardId, field)}
+            onEditingStop={(field) => handleCardEditingStop(selectedCard.id, selectedCard.boardId, field)}
+            editorsInfo={cardEditors.filter(e => e.cardId === selectedCard.id)}
+            currentUserId={currentUserId}
+            canEdit={canEditCards}
+            canComment={canComment}
+            votingLimit={board?.permissions?.votingLimit ?? 0}
+          />
+        );
+        // fullPage mode returns bare content with no backdrop/portal of its
+        // own (meant to fill whatever container hosts it) — this local
+        // toggle IS that container (no route change, so no remount / no
+        // re-fetch losing the already-loaded card data).
+        return cardFullPage
+          ? <div className="kanban-scroll fixed inset-0 z-[9999] overflow-y-auto bg-white dark:bg-[#22272b]">{modal}</div>
+          : modal;
+      })()}
 
       {/* Move blocked dialog */}
       {moveBlockDialog && (

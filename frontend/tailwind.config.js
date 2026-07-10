@@ -103,6 +103,7 @@ export default {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'fade-in-up': 'fadeInUp 0.5s ease-out',
         'slide-in-right': 'slideInRight 0.3s ease-out',
+        'slide-up-sheet': 'slideUpSheet 0.2s ease-out',
         'pulse-slow': 'pulse 3s infinite',
       },
       keyframes: {
@@ -117,6 +118,10 @@ export default {
         slideInRight: {
           '0%': { transform: 'translateX(100%)' },
           '100%': { transform: 'translateX(0)' },
+        },
+        slideUpSheet: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
         },
       },
       borderRadius: {

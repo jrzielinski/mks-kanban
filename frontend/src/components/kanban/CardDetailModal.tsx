@@ -615,9 +615,12 @@ export const CardDetailModal: React.FC<Props> = ({ card, listTitle, boardId, boa
   };
 
   // C3 handlers
+  // Empty query intentionally falls through to advancedSearch({}) — the
+  // backend treats a blank `q` as "no text filter" and returns the most
+  // recently updated cards, which is what lets the list show up on focus
+  // before the user types anything.
   const searchCardsToLink = async (query: string) => {
     setLinkSearch(query);
-    if (query.trim().length < 2) { setLinkSearchResults([]); return; }
     setLinkSearchLoading(true);
     try {
       const results = await kanbanService.advancedSearch({ q: query.trim() });
@@ -1431,18 +1434,18 @@ export const CardDetailModal: React.FC<Props> = ({ card, listTitle, boardId, boa
             </div>
           )}
 
-          {/* Close / Expand */}
+          {/* Close / Expand — the close button stays reachable even in
+              fullPage mode (it's how the user gets back out); only the
+              "expand" action itself hides once already expanded. */}
           <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
             {!fullPage && onOpenFullPage && (
               <button onClick={onOpenFullPage} title={t('kanbanCardDetailModal.actions.openFullScreen')} className="p-1.5 rounded-full bg-[#091e420f] hover:bg-[#091e4224] dark:bg-[#ffffff1f] dark:hover:bg-[#ffffff3d] text-[#44546f] dark:text-[#8c9bab] transition-colors">
                 <Maximize2 className="w-4 h-4" />
               </button>
             )}
-            {!fullPage && (
-              <button onClick={onClose} className="p-1.5 rounded-full bg-[#091e420f] hover:bg-[#091e4224] dark:bg-[#ffffff1f] dark:hover:bg-[#ffffff3d] text-[#44546f] dark:text-[#8c9bab] transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            )}
+            <button onClick={onClose} className="p-1.5 rounded-full bg-[#091e420f] hover:bg-[#091e4224] dark:bg-[#ffffff1f] dark:hover:bg-[#ffffff3d] text-[#44546f] dark:text-[#8c9bab] transition-colors">
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           <div className="flex flex-col md:flex-row gap-0">
@@ -2494,6 +2497,7 @@ export const CardDetailModal: React.FC<Props> = ({ card, listTitle, boardId, boa
                   <input
                     value={linkSearch}
                     onChange={e => void searchCardsToLink(e.target.value)}
+                    onFocus={() => { if (linkSearchResults.length === 0) void searchCardsToLink(linkSearch); }}
                     placeholder={t('kanbanCardDetailModal.placeholders.searchCard')}
                     className={`w-full rounded-xl border pr-9 px-3 py-2 text-sm text-[#172b4d] outline-none placeholder-[#8590a2] dark:text-[#b6c2cf] transition-colors ${
                       isLinkRecording
