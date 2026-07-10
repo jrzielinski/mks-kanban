@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { seedAuth, AuthSession } from './seedAuth';
+import { seedAuth, isEmbeddedInHost, requestHostSession } from './seedAuth';
 
 /**
  * SSO from the MakeStudio host (web mode — see KanbanIframeHost in
@@ -12,41 +12,23 @@ import { seedAuth, AuthSession } from './seedAuth';
  * No-op outside an iframe (own tab, Electron) — hydrated starts true.
  */
 export function useHostAuthSync(): { hydrated: boolean } {
-  const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
+  const isEmbedded = isEmbeddedInHost();
   const [hydrated, setHydrated] = useState(!isEmbedded);
 
   useEffect(() => {
     if (!isEmbedded) return;
-
-    // The host's origin, derived from document.referrer — used to reject
-    // session messages from anywhere else. Falls back to accepting any
-    // origin only when the referrer is unavailable (e.g. stripped by a
-    // strict Referrer-Policy upstream).
-    let hostOrigin: string | null = null;
-    try {
-      hostOrigin = document.referrer ? new URL(document.referrer).origin : null;
-    } catch {
-      hostOrigin = null;
-    }
-
-    const onMessage = (ev: MessageEvent): void => {
-      if (hostOrigin && ev.origin !== hostOrigin) return;
-      const data = ev.data as { type?: string; session?: AuthSession | null } | null;
-      if (data?.type !== 'mks-kanban:sso-session') return;
-      if (data.session) seedAuth(data.session);
-      window.clearTimeout(timeout);
-      setHydrated(true);
-    };
-    window.addEventListener('message', onMessage);
-    window.parent.postMessage({ type: 'mks-kanban:sso-ready' }, hostOrigin ?? '*');
+    let cancelled = false;
 
     // Fail open — an older host build or a page that frames us without
     // implementing the handshake shouldn't hang the spinner forever.
-    const timeout = window.setTimeout(() => setHydrated(true), 4000);
+    requestHostSession().then((session) => {
+      if (cancelled) return;
+      if (session) seedAuth(session);
+      setHydrated(true);
+    });
 
     return () => {
-      window.removeEventListener('message', onMessage);
-      window.clearTimeout(timeout);
+      cancelled = true;
     };
   }, [isEmbedded]);
 

@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import i18n from './i18n'
 import identityApi from './identityApi'
 import { useAuthStore } from '@/store/auth'
+import { isEmbeddedInHost, requestHostSession, seedAuth } from '@/kanban-app/seedAuth'
 
 function getTenantIdFromDomain(): string {
   const hostname = window.location.hostname
@@ -88,6 +89,23 @@ api.interceptors.response.use(
 
       originalRequest._retry = true
       isRefreshing = true
+
+      // Embedded (SSO): the token/refreshToken seeded via postMessage belong
+      // to the MakeStudio host account, not to kanban — kanban's own
+      // /auth/refresh can never redeem them. Ask the host to re-push a fresh
+      // session (covers token expiry, or the host's own token having
+      // rotated since the iframe first loaded) before falling back to
+      // kanban's native refresh/login below.
+      if (isEmbeddedInHost()) {
+        const session = await requestHostSession()
+        if (session?.token) {
+          seedAuth(session)
+          processQueue(null, session.token)
+          isRefreshing = false
+          originalRequest.headers['Authorization'] = 'Bearer ' + session.token
+          return api(originalRequest)
+        }
+      }
 
       const refreshToken = localStorage.getItem('refreshToken')
 
