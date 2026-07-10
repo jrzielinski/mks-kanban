@@ -228,6 +228,10 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
   const { confirm } = useConfirm();
   const [addingCard, setAddingCard] = useState(false);
   const [newCardTitle, setNewCardTitle] = useState('');
+  // Guards handleAddCard/applyTemplate against rapid repeat clicks — both
+  // await 1-2 network round trips with no re-entry guard before, so a fast
+  // double-tap (very easy on mobile) fired multiple concurrent creates.
+  const [isCreatingCard, setIsCreatingCard] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(list.title);
   const [showMenu, setShowMenu] = useState(false);
@@ -266,8 +270,11 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
   };
 
   const applyTemplate = async (tpl: typeof CARD_TEMPLATES[0]) => {
+    if (isCreatingCard) return;
     const cardTitle = newCardTitle.trim() || tpl.title;
     if (!cardTitle) { setShowTemplates(false); return; }
+    setIsCreatingCard(true);
+    setShowTemplates(false);
     try {
       const card = await kanbanService.createCard(list.id, { title: cardTitle });
       // Apply template data
@@ -278,8 +285,8 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
       onCardAdded({ ...card, ...withData });
       setNewCardTitle('');
       setAddingCard(false);
-      setShowTemplates(false);
     } catch { toast.error(t('kanbanColumn.toasts.errorCreateCardTemplate')); }
+    finally { setIsCreatingCard(false); }
   };
 
   const cardIds = useMemo(() => list.cards.map((c) => c.id), [list.cards]);
@@ -301,13 +308,16 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
   }, [cardEditors]);
 
   const handleAddCard = async () => {
+    if (isCreatingCard) return;
     if (!newCardTitle.trim()) { setAddingCard(false); return; }
+    setIsCreatingCard(true);
     try {
       const card = await kanbanService.createCard(list.id, { title: newCardTitle.trim() });
       onCardAdded(card);
       setNewCardTitle('');
       setAddingCard(false);
     } catch { toast.error(t('kanbanColumn.toasts.errorCreateCard')); }
+    finally { setIsCreatingCard(false); }
   };
 
   const handleRenameList = async () => {
@@ -625,14 +635,16 @@ export const KanbanColumn = memo(function KanbanColumn({ list, boardMembers, onC
               <div className="mt-2 flex items-center gap-1">
                 <button
                   onClick={() => void handleAddCard()}
-                  className="flex items-center gap-1 rounded-lg bg-[#0c66e4] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0055cc]"
+                  disabled={isCreatingCard}
+                  className="flex items-center gap-1 rounded-lg bg-[#0c66e4] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#0055cc] disabled:opacity-50"
                 >
                   <Check className="w-3 h-3" /> {t('kanbanColumn.actions.addCardButton')}
                 </button>
                 <div className="relative">
                   <button
                     onClick={() => setShowTemplates(p => !p)}
-                    className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-[#44546f] transition-colors hover:bg-slate-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500"
+                    disabled={isCreatingCard}
+                    className="flex items-center gap-1 rounded-lg bg-slate-100 px-2 py-1.5 text-xs font-medium text-[#44546f] transition-colors hover:bg-slate-200 dark:bg-gray-600 dark:text-gray-300 dark:hover:bg-gray-500 disabled:opacity-50"
                     title="Templates"
                   >
                     <LayoutTemplate className="w-3 h-3" />
